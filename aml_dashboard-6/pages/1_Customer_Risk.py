@@ -14,7 +14,7 @@ from theme import (
     inject_css, page_header, section_title, risk_pill,
     chart_layout_2d, chart_layout_3d, chart_color_sequence,
     RISK_COLOR_MAP,
-    TEAL_DARK, TEAL_MID, TEAL_LIGHT, TEAL_SOFT,
+    TEAL_DARK, TEAL_MID, TEAL_LIGHT, TEAL_PALE, TEAL_SOFT,
     CRITICAL, HIGH, MEDIUM, LOW, INFO,
     TEXT_PRIMARY, TEXT_MUTED, CARD_BORDER, CHART_GRID,
 )
