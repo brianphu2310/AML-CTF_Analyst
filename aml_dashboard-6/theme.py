@@ -5,6 +5,10 @@ Shared visual theme helpers for the AML Compliance Suite.
 Power BI-style corporate dashboard. Light neutral background with subtle
 world-map watermark, white cards with soft borders/shadows, muted teal
 accent palette, fully transparent charts. No decorative icons.
+
+This version includes backwards-compatibility aliases (NAVY, BRASS, INK,
+MUTED, PAPER, PANEL, BORDER) so older pages that still reference the
+previous palette keep working without edits.
 """
 
 import textwrap
@@ -51,6 +55,22 @@ RISK_COLOR_MAP = {
 
 MAP_COLOR     = "#B8C6CE"
 MAP_OPACITY   = "0.35"
+
+
+# --------------------------------------------------------------------------
+# BACKWARDS-COMPAT ALIASES
+# Older pages (e.g. 11_Process_Map.py, 6_Business_KYC.py) still reference
+# the previous palette names. Map them onto the new teal palette so those
+# files keep working without any edits.
+# --------------------------------------------------------------------------
+NAVY      = TEAL_DARK
+NAVY_DARK = TEAL_DARK
+BRASS     = TEAL_LIGHT
+INK       = TEXT_PRIMARY
+MUTED     = TEXT_MUTED
+PAPER     = CARD_BG
+PANEL     = BG_GRADIENT_2
+BORDER    = CARD_BORDER
 
 
 # --------------------------------------------------------------------------
@@ -492,4 +512,4 @@ def apply_shadow(fig, marker=True, bar=True):
             marker=dict(line=dict(width=0.5, color="white")),
             selector=dict(type="scatter"),
         )
-    return fig
+    return fig                                                          
