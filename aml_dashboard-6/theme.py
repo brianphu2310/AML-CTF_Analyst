@@ -2,59 +2,70 @@
 theme.py
 Shared visual theme helpers for the AML Compliance Suite.
 
-Power BI-style corporate dashboard. Light neutral background with subtle
-world-map watermark, white cards with soft borders/shadows, muted teal
-accent palette, fully transparent charts. No decorative icons.
+DARK MODE v3 — deep-space navy background with an animated aurora glow,
+frosted-glass ("glassmorphism") cards, layered neon-adjacent shadows for a
+3D "floating panel" feel, and a cyan/teal accent that pops against the
+dark surface. Every Plotly chart gets a shared dark layout with unified
+hover, spike lines, smooth transitions, and a subtle "lift + glow" on
+hover so the whole suite reads as interactive, not static.
 
-This version includes backwards-compatibility aliases (NAVY, BRASS, INK,
-MUTED, PAPER, PANEL, BORDER) so older pages that still reference the
-previous palette keep working without edits.
-
-v2: adds polished, elevated "card" shadows around every Plotly chart
-(applies globally via CSS, no per-chart code changes needed), a
-teal-gradient helper for color-harmonious sequential bar charts, and a
-segmented-toolbar look for interactive controls placed at the top of
-each section.
+Backwards-compatibility aliases (NAVY, BRASS, INK, MUTED, PAPER, PANEL,
+BORDER) are kept so older pages that reference the previous palette
+keep working without edits.
 """
 
 import textwrap
 import streamlit as st
 
 # ---------------------------------------------------------------- PALETTE
-BG_GRADIENT_1 = "#EEF2F4"
-BG_GRADIENT_2 = "#F6F8FA"
-CARD_BG       = "#FFFFFF"
-CARD_BORDER   = "#D6DDE3"
-CARD_SHADOW   = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)"
+# Deep space navy backdrop, layered so the aurora glow has room to breathe.
+BG_GRADIENT_1 = "#060B14"
+BG_GRADIENT_2 = "#0B1524"
+BG_GRADIENT_3 = "#0E1B2E"
 
-# Stronger, layered shadow reserved for chart cards -> gives them a
-# slightly "lifted" 3D presence relative to flat KPI cards.
-CHART_SHADOW       = "0 10px 26px rgba(15, 23, 42, 0.10), 0 3px 8px rgba(15, 23, 42, 0.06)"
-CHART_SHADOW_HOVER = "0 16px 34px rgba(15, 23, 42, 0.15), 0 6px 14px rgba(15, 23, 42, 0.08)"
+# Frosted glass cards — semi-transparent so the aurora glow shows through,
+# combined with backdrop-filter blur (applied in CSS below).
+CARD_BG        = "rgba(20, 30, 48, 0.62)"
+CARD_BG_SOLID  = "#121D2E"
+CARD_BORDER    = "rgba(148, 178, 214, 0.16)"
+CARD_BORDER_HI = "rgba(45, 212, 191, 0.45)"
 
-TEAL_DARK     = "#3D5F6E"
-TEAL_MID      = "#4A6E7E"
-TEAL_LIGHT    = "#7BA8B8"
-TEAL_PALE     = "#A8C4CE"
-TEAL_SOFT     = "#DCE8EC"
+# Layered shadows: a soft dark drop shadow for depth + a faint accent glow
+# so cards feel like they're floating just above the background.
+CARD_SHADOW   = "0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255,255,255,0.03) inset"
+CHART_SHADOW       = ("0 22px 45px rgba(0, 0, 0, 0.55), "
+                       "0 4px 14px rgba(0, 0, 0, 0.35), "
+                       "0 0 0 1px rgba(148,178,214,0.08), "
+                       "0 0 32px rgba(45, 212, 191, 0.06)")
+CHART_SHADOW_HOVER = ("0 32px 64px rgba(0, 0, 0, 0.65), "
+                       "0 8px 20px rgba(0, 0, 0, 0.4), "
+                       "0 0 0 1px rgba(45,212,191,0.35), "
+                       "0 0 46px rgba(45, 212, 191, 0.28)")
 
-TEXT_PRIMARY  = "#2C3E50"
-TEXT_MUTED    = "#6B7A8A"
-TEXT_ALERT    = "#A93226"
+# Accent ramp — bright cyan/teal that glows on a dark surface.
+TEAL_DARK     = "#2DD4BF"   # primary accent (was the "dark" corporate teal)
+TEAL_MID      = "#22D3EE"   # secondary accent, slightly more blue
+TEAL_LIGHT    = "#67E8CE"
+TEAL_PALE     = "#99F0DF"
+TEAL_SOFT     = "rgba(45, 212, 191, 0.14)"
 
-CRITICAL      = "#A93226"
-HIGH          = "#C1622E"
-MEDIUM        = "#8A6D1D"
-LOW           = "#2E7D5B"
-INFO          = "#4A6E7E"
+TEXT_PRIMARY  = "#E7EDF5"
+TEXT_MUTED    = "#8FA1BC"
+TEXT_ALERT    = "#FB7185"
 
-CHART_GRID    = "#E5E9EC"
-CHART_SEQ     = ["#3D5F6E", "#7BA8B8", "#A8C4CE", "#5B8A9C", "#8FA9B5", "#4A6E7E",
-                 "#2E7D5B", "#C1622E", "#8A6D1D", "#A93226"]
+CRITICAL      = "#FB7185"
+HIGH          = "#FB923C"
+MEDIUM        = "#FBBF24"
+LOW           = "#34D399"
+INFO          = "#38BDF8"
+
+CHART_GRID    = "rgba(148, 178, 214, 0.12)"
+CHART_SEQ     = ["#2DD4BF", "#38BDF8", "#A78BFA", "#FB923C", "#34D399", "#22D3EE",
+                 "#FBBF24", "#FB7185", "#67E8CE", "#818CF8"]
 
 CHART_SEQ_EXT = [
-    "#3D5F6E", "#7BA8B8", "#A8C4CE", "#5B8A9C", "#8FA9B5", "#4A6E7E",
-    "#2E7D5B", "#C1622E", "#8A6D1D", "#A93226", "#6D8A9C", "#96B4C0",
+    "#2DD4BF", "#38BDF8", "#A78BFA", "#FB923C", "#34D399", "#22D3EE",
+    "#FBBF24", "#FB7185", "#67E8CE", "#818CF8", "#F472B6", "#4ADE80",
 ]
 
 RISK_COLOR_MAP = {
@@ -64,8 +75,8 @@ RISK_COLOR_MAP = {
     "Critical": CRITICAL,
 }
 
-MAP_COLOR     = "#B8C6CE"
-MAP_OPACITY   = "0.35"
+MAP_COLOR     = "#3D5F78"
+MAP_OPACITY   = "0.5"
 
 
 # --------------------------------------------------------------------------
@@ -92,9 +103,9 @@ _WORLD_MAP_SVG = """
       <circle cx="1.5" cy="1.5" r="1.1" fill="COLOR"/>
     </pattern>
     <radialGradient id="fade" cx="50%" cy="50%" r="65%">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0"/>
-      <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="0%" stop-color="#060B14" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#060B14" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#060B14" stop-opacity="0.96"/>
     </radialGradient>
   </defs>
   <g opacity="0.55">
@@ -115,7 +126,7 @@ _WORLD_MAP_SVG = """
     <path d="M1520,700 C1590,690 1680,710 1710,760 C1740,810 1700,860 1630,870
              C1560,880 1480,850 1460,800 C1440,760 1470,710 1520,700 Z" fill="url(#dots)"/>
   </g>
-  <g fill="none" stroke="COLOR" stroke-width="1.1" opacity="0.5" stroke-dasharray="3 5">
+  <g fill="none" stroke="COLOR" stroke-width="1.1" opacity="0.55" stroke-dasharray="3 5">
     <path d="M320,320 Q600,120 960,260"/>
     <path d="M960,260 Q1300,180 1560,420"/>
     <path d="M960,260 Q900,520 950,600"/>
@@ -124,7 +135,7 @@ _WORLD_MAP_SVG = """
     <path d="M950,600 Q1200,700 1640,780"/>
     <path d="M320,320 Q240,500 430,600"/>
   </g>
-  <g fill="COLOR" opacity="0.85">
+  <g fill="COLOR" opacity="0.9">
     <circle cx="320"  cy="320" r="4.5"/>
     <circle cx="960"  cy="260" r="5.5"/>
     <circle cx="1560" cy="420" r="4.5"/>
@@ -145,9 +156,27 @@ html, body, [class*="css"] {{
     font-family: 'Inter', 'Segoe UI', sans-serif;
     color: {TEXT_PRIMARY};
 }}
+
+/* ---------------------------------------------------------------
+   ANIMATED AURORA BACKGROUND
+   A slow-drifting radial-gradient wash behind everything, giving the
+   dark theme depth and a subtle sense of motion without being noisy.
+--------------------------------------------------------------- */
+@keyframes auroraDrift {{
+    0%   {{ background-position: 0% 0%, 100% 100%, 50% 50%; }}
+    50%  {{ background-position: 100% 30%, 0% 70%, 60% 40%; }}
+    100% {{ background-position: 0% 0%, 100% 100%, 50% 50%; }}
+}}
 .stApp {{
-    background: linear-gradient(180deg, {BG_GRADIENT_1} 0%, {BG_GRADIENT_2} 100%);
+    background-color: {BG_GRADIENT_1};
+    background-image:
+        radial-gradient(circle at 15% 15%, rgba(45,212,191,0.10) 0%, transparent 45%),
+        radial-gradient(circle at 85% 80%, rgba(56,189,248,0.09) 0%, transparent 45%),
+        radial-gradient(circle at 50% 50%, rgba(167,139,250,0.05) 0%, transparent 60%),
+        linear-gradient(180deg, {BG_GRADIENT_1} 0%, {BG_GRADIENT_2} 55%, {BG_GRADIENT_3} 100%);
+    background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
     background-attachment: fixed;
+    animation: auroraDrift 34s ease-in-out infinite;
 }}
 .ampl-map-bg {{
     position: fixed; top: 0; left: 0;
@@ -167,19 +196,28 @@ h1, h2, h3 {{
     font-family: 'Source Serif 4', Georgia, serif;
     color: {TEAL_DARK}; font-weight: 600;
 }}
+::selection {{ background: rgba(45,212,191,0.35); color: #FFFFFF; }}
+
+/* ---------------------------------------------------------------
+   HEADER — glass panel with an accent glow edge
+--------------------------------------------------------------- */
 .suite-header {{
     display: flex; align-items: center; justify-content: space-between;
     padding: 1.3rem 1.8rem;
     background: {CARD_BG};
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid {CARD_BORDER};
     border-left: 4px solid {TEAL_DARK};
-    box-shadow: {CARD_SHADOW};
+    box-shadow: {CARD_SHADOW}, 0 0 26px rgba(45,212,191,0.10);
+    border-radius: 10px;
     margin-bottom: 1.6rem;
 }}
 .suite-header h1 {{
     font-family: 'Source Serif 4', Georgia, serif;
-    font-size: 1.5rem; font-weight: 700;
-    margin: 0; color: {TEAL_DARK};
+    font-size: 1.55rem; font-weight: 700;
+    margin: 0; color: #F5FAFA;
+    text-shadow: 0 0 22px rgba(45,212,191,0.35);
 }}
 .suite-header p {{
     margin: 0.3rem 0 0 0;
@@ -187,24 +225,34 @@ h1, h2, h3 {{
     font-family: 'Inter', sans-serif;
 }}
 .suite-badge {{
-    background: {TEAL_SOFT}; color: {TEAL_DARK};
-    border: 1px solid {TEAL_LIGHT};
-    padding: 0.3rem 0.9rem;
+    background: {TEAL_SOFT}; color: {TEAL_PALE};
+    border: 1px solid {CARD_BORDER_HI};
+    padding: 0.3rem 0.9rem; border-radius: 20px;
     font-size: 0.7rem; font-weight: 700;
     letter-spacing: 0.14em; text-transform: uppercase;
     white-space: nowrap;
+    box-shadow: 0 0 16px rgba(45,212,191,0.25);
 }}
+
+/* ---------------------------------------------------------------
+   KPI CARDS — glass + lift + glow on hover (the "3D" feel)
+--------------------------------------------------------------- */
 .kpi-card {{
     background: {CARD_BG};
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid {CARD_BORDER};
     border-top: 3px solid {TEAL_DARK};
     box-shadow: {CARD_SHADOW};
+    border-radius: 10px;
     padding: 1rem 1.2rem; height: 100%;
-    transition: box-shadow 0.18s ease, transform 0.18s ease;
+    transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+    transform-style: preserve-3d;
 }}
 .kpi-card:hover {{
-    box-shadow: {CHART_SHADOW};
-    transform: translateY(-2px);
+    box-shadow: {CHART_SHADOW_HOVER};
+    border-color: {CARD_BORDER_HI};
+    transform: translateY(-4px) perspective(600px) rotateX(2deg);
 }}
 .kpi-label {{
     color: {TEXT_MUTED};
@@ -214,156 +262,173 @@ h1, h2, h3 {{
 }}
 .kpi-value {{
     font-family: 'Source Serif 4', Georgia, serif;
-    color: {TEAL_DARK};
-    font-size: 1.85rem; font-weight: 700;
+    color: #F5FAFA;
+    font-size: 1.9rem; font-weight: 700;
     line-height: 1.1; letter-spacing: -0.01em;
+    text-shadow: 0 0 18px rgba(45,212,191,0.25);
 }}
 .kpi-sub {{
     font-size: 0.76rem; margin-top: 0.4rem;
     color: {TEXT_MUTED};
 }}
+
 .section-title {{
     font-family: 'Source Serif 4', Georgia, serif;
-    font-size: 1.08rem; font-weight: 700;
-    color: {TEAL_DARK};
+    font-size: 1.1rem; font-weight: 700;
+    color: #F5FAFA;
     margin: 1.8rem 0 0.7rem 0;
-    padding-bottom: 0.45rem;
-    border-bottom: 2px solid {TEAL_LIGHT};
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(45,212,191,0.35);
+    text-shadow: 0 0 14px rgba(45,212,191,0.18);
 }}
-/* -------------------------------------------------------------------
-   SECTION TOOLBAR ROW
-   A section title paired with an interactive control, control pinned
-   top-right so it reads as "belonging" to the section before any
-   chart appears beneath it.
-------------------------------------------------------------------- */
 .section-toolbar {{
     display: flex; align-items: flex-end; justify-content: space-between;
     gap: 1rem;
     margin: 1.8rem 0 0.7rem 0;
     padding-bottom: 0.45rem;
-    border-bottom: 2px solid {TEAL_LIGHT};
+    border-bottom: 2px solid rgba(45,212,191,0.35);
 }}
 .section-toolbar .section-title {{
     margin: 0; padding: 0; border: none;
 }}
-/* -------------------------------------------------------------------
-   ELEVATED CHART CARDS
-   Every Plotly chart is wrapped by Streamlit in a
-   div[data-testid="stPlotlyChart"] — styling it directly gives every
-   chart on every page a consistent, polished "raised panel" look
-   with a soft 3D-style shadow, no per-chart code changes required.
-------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------
+   ELEVATED, INTERACTIVE CHART CARDS
+   Deep layered shadow + faint glow ring so every chart on every
+   page reads as a floating glass panel; a stronger hover state
+   (lift + brighter glow + slight scale) makes hovering feel alive.
+--------------------------------------------------------------- */
 div[data-testid="stPlotlyChart"] {{
     background: {CARD_BG};
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
     border: 1px solid {CARD_BORDER};
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: {CHART_SHADOW};
     padding: 0.9rem 1rem 0.3rem 1rem;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    transition: box-shadow 0.3s cubic-bezier(.22,1,.36,1),
+                transform 0.3s cubic-bezier(.22,1,.36,1),
+                border-color 0.3s ease;
 }}
 div[data-testid="stPlotlyChart"]:hover {{
     box-shadow: {CHART_SHADOW_HOVER};
-    transform: translateY(-3px);
+    border-color: {CARD_BORDER_HI};
+    transform: translateY(-5px) scale(1.004);
 }}
-/* Indicator/gauge charts sit in their own columns and read better
-   slightly smaller + centered than full-width trend charts. */
 div[data-testid="stPlotlyChart"] .plotly {{
-    border-radius: 6px;
+    border-radius: 8px;
 }}
+
 .pill {{
     display: inline-block;
-    padding: 0.16rem 0.6rem;
+    padding: 0.18rem 0.65rem;
     font-size: 0.7rem; font-weight: 700;
     letter-spacing: 0.04em; text-transform: uppercase;
-    border-radius: 2px; border: 1px solid;
+    border-radius: 20px; border: 1px solid;
 }}
-.pill-critical {{ background: #FBEAEA; color: {CRITICAL}; border-color: #E3B8B8; }}
-.pill-high     {{ background: #FCEEE3; color: {HIGH};     border-color: #E9C6A6; }}
-.pill-medium   {{ background: #FBF3DD; color: {MEDIUM};   border-color: #E4D093; }}
-.pill-low      {{ background: #E7F3EC; color: {LOW};      border-color: #B7D9C6; }}
-.pill-info     {{ background: {TEAL_SOFT}; color: {INFO}; border-color: {TEAL_PALE}; }}
+.pill-critical {{ background: rgba(251,113,133,0.14); color: {CRITICAL}; border-color: rgba(251,113,133,0.4); box-shadow: 0 0 12px rgba(251,113,133,0.18); }}
+.pill-high     {{ background: rgba(251,146,60,0.14);  color: {HIGH};     border-color: rgba(251,146,60,0.4);  box-shadow: 0 0 12px rgba(251,146,60,0.18); }}
+.pill-medium   {{ background: rgba(251,191,36,0.14);  color: {MEDIUM};   border-color: rgba(251,191,36,0.4);  box-shadow: 0 0 12px rgba(251,191,36,0.18); }}
+.pill-low      {{ background: rgba(52,211,153,0.14);  color: {LOW};      border-color: rgba(52,211,153,0.4);  box-shadow: 0 0 12px rgba(52,211,153,0.18); }}
+.pill-info     {{ background: {TEAL_SOFT}; color: {TEAL_PALE}; border-color: {CARD_BORDER_HI}; box-shadow: 0 0 12px rgba(45,212,191,0.18); }}
+
 div[data-testid="stMetric"] {{
     background: {CARD_BG};
+    backdrop-filter: blur(14px);
     border: 1px solid {CARD_BORDER};
     border-top: 3px solid {TEAL_DARK};
     box-shadow: {CARD_SHADOW};
-    padding: 0.9rem 1.05rem; border-radius: 2px;
+    padding: 0.9rem 1.05rem; border-radius: 10px;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+}}
+div[data-testid="stMetric"]:hover {{
+    box-shadow: {CHART_SHADOW_HOVER};
+    transform: translateY(-3px);
 }}
 div[data-testid="stMetricValue"] {{
     font-family: 'Source Serif 4', Georgia, serif;
-    color: {TEAL_DARK}; font-weight: 700;
+    color: #F5FAFA; font-weight: 700;
+    text-shadow: 0 0 16px rgba(45,212,191,0.3);
 }}
 div[data-testid="stMetricLabel"] {{
     color: {TEXT_MUTED}; text-transform: uppercase;
     font-size: 0.72rem; letter-spacing: 0.07em; font-weight: 600;
 }}
+
 table {{
     border-collapse: collapse; width: 100%;
-    font-size: 0.85rem; background: {CARD_BG};
+    font-size: 0.85rem; background: {CARD_BG_SOLID};
     border: 1px solid {CARD_BORDER};
     box-shadow: {CARD_SHADOW};
+    border-radius: 8px; overflow: hidden;
 }}
 table thead th {{
-    background: {TEAL_DARK}; color: #F5F7F9;
+    background: linear-gradient(90deg, #0D2530 0%, #123645 100%);
+    color: {TEAL_PALE};
     text-align: left; padding: 0.6rem 0.75rem;
     font-weight: 600; font-size: 0.72rem;
     text-transform: uppercase; letter-spacing: 0.05em;
-    border-bottom: 1px solid {TEAL_MID};
+    border-bottom: 1px solid rgba(45,212,191,0.3);
 }}
 table tbody td {{
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid {CHART_GRID};
     color: {TEXT_PRIMARY};
 }}
-table tbody tr:nth-child(even) {{ background: #FAFBFC; }}
-table tbody tr:hover {{ background: {TEAL_SOFT}; }}
+table tbody tr:nth-child(even) {{ background: rgba(255,255,255,0.02); }}
+table tbody tr:hover {{ background: rgba(45,212,191,0.08); }}
+
 .stTabs [data-baseweb="tab-list"] {{
     gap: 2px; border-bottom: 1px solid {CARD_BORDER};
     background: transparent;
 }}
 .stTabs [data-baseweb="tab"] {{
-    background-color: transparent; border-radius: 0;
+    background-color: transparent; border-radius: 8px 8px 0 0;
     padding: 0.65rem 1.15rem; font-weight: 600;
     color: {TEXT_MUTED}; font-size: 0.88rem;
+    transition: color 0.2s ease, background 0.2s ease;
 }}
 .stTabs [data-baseweb="tab"]:hover {{
-    color: {TEAL_MID}; background: {TEAL_SOFT};
+    color: {TEAL_LIGHT}; background: {TEAL_SOFT};
 }}
 .stTabs [aria-selected="true"] {{
-    color: {TEAL_DARK} !important;
+    color: #F5FAFA !important;
     border-bottom: 3px solid {TEAL_DARK} !important;
     background: transparent !important;
+    text-shadow: 0 0 12px rgba(45,212,191,0.4);
 }}
+
 .stButton>button, .stDownloadButton>button {{
-    border-radius: 2px;
-    border: 1px solid {TEAL_LIGHT};
-    background: {CARD_BG};
-    color: {TEAL_DARK}; font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid {CARD_BORDER_HI};
+    background: rgba(45,212,191,0.06);
+    color: {TEAL_PALE}; font-weight: 600;
     font-size: 0.86rem;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }}
 .stButton>button:hover, .stDownloadButton>button:hover {{
-    background: {TEAL_SOFT}; border-color: {TEAL_MID};
-    color: {TEAL_DARK};
+    background: {TEAL_SOFT}; border-color: {TEAL_DARK};
+    color: #FFFFFF;
+    box-shadow: 0 0 18px rgba(45,212,191,0.35);
+    transform: translateY(-1px);
 }}
 .stButton>button[kind="primary"], .stDownloadButton>button[kind="primary"] {{
-    background: {TEAL_DARK}; border-color: {TEAL_DARK};
-    color: #F5F7F9;
+    background: linear-gradient(135deg, {TEAL_DARK}, {TEAL_MID});
+    border-color: {TEAL_DARK};
+    color: #06131A; font-weight: 700;
 }}
 .stButton>button[kind="primary"]:hover {{
-    background: {TEAL_MID}; border-color: {TEAL_MID};
-    color: #FFFFFF;
+    box-shadow: 0 0 24px rgba(45,212,191,0.5);
+    transform: translateY(-1px);
 }}
-/* -------------------------------------------------------------------
-   SEGMENTED TOOLBAR CONTROLS
-   Horizontal st.radio widgets styled as pill/segmented toggles so
-   the per-section interactive controls read as toolbar chrome
-   sitting above the chart, not as a stray form field.
-------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------
+   SEGMENTED TOOLBAR CONTROLS (st.radio as pill toggles)
+--------------------------------------------------------------- */
 div[data-testid="stRadio"] > div {{
     gap: 0.3rem;
-    background: {TEAL_SOFT};
-    border: 1px solid {TEAL_PALE};
+    background: rgba(255,255,255,0.04);
+    border: 1px solid {CARD_BORDER};
     border-radius: 20px;
     padding: 0.2rem;
     display: inline-flex;
@@ -374,25 +439,23 @@ div[data-testid="stRadio"] label {{
     padding: 0.2rem 0.75rem !important;
     margin: 0 !important;
     font-size: 0.76rem !important;
-    color: {TEAL_DARK};
-    transition: all 0.15s ease;
+    color: {TEXT_MUTED};
+    transition: all 0.2s ease;
 }}
 div[data-testid="stRadio"] label:hover {{
-    background: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.06);
+    color: {TEAL_LIGHT};
 }}
-div[data-testid="stRadio"] input:checked + div {{
-    color: #FFFFFF;
-}}
-div[data-testid="stRadio"] label[data-checked="true"],
 div[data-testid="stRadio"] label:has(input:checked) {{
-    background: {TEAL_DARK};
-    box-shadow: 0 2px 6px rgba(61,95,110,0.35);
+    background: linear-gradient(135deg, {TEAL_DARK}, {TEAL_MID});
+    box-shadow: 0 2px 14px rgba(45,212,191,0.45);
 }}
 div[data-testid="stRadio"] label:has(input:checked) p {{
-    color: #FFFFFF !important; font-weight: 600;
+    color: #06131A !important; font-weight: 700;
 }}
+
 section[data-testid="stSidebar"] {{
-    background: {CARD_BG};
+    background: linear-gradient(180deg, #0A1220 0%, #0D1A2B 100%);
     border-right: 1px solid {CARD_BORDER};
 }}
 section[data-testid="stSidebar"] h3 {{
@@ -402,16 +465,21 @@ section[data-testid="stSidebar"] h3 {{
 section[data-testid="stSidebar"] label {{
     color: {TEXT_MUTED}; font-size: 0.8rem; font-weight: 600;
 }}
+
 .stTextInput input, .stTextArea textarea,
 .stSelectbox div[data-baseweb="select"] > div {{
-    border-radius: 2px; border-color: {CARD_BORDER};
+    border-radius: 8px; border-color: {CARD_BORDER};
+    background: rgba(255,255,255,0.03); color: {TEXT_PRIMARY};
 }}
 .stTextInput input:focus, .stTextArea textarea:focus {{
     border-color: {TEAL_MID} !important;
-    box-shadow: 0 0 0 1px {TEAL_MID} !important;
+    box-shadow: 0 0 0 2px rgba(34,211,238,0.35) !important;
 }}
+
 div[data-testid="stAlert"] {{
-    border-radius: 2px; border-left: 4px solid {TEAL_DARK};
+    border-radius: 8px; border-left: 4px solid {TEAL_DARK};
+    background: {CARD_BG}; backdrop-filter: blur(10px);
+    box-shadow: {CARD_SHADOW};
 }}
 hr {{ border-color: {CARD_BORDER}; margin: 1.5rem 0; }}
 </style>"""
@@ -433,8 +501,11 @@ def inject_css():
         TEXT_MUTED=TEXT_MUTED,
         BG_GRADIENT_1=BG_GRADIENT_1,
         BG_GRADIENT_2=BG_GRADIENT_2,
+        BG_GRADIENT_3=BG_GRADIENT_3,
         CARD_BG=CARD_BG,
+        CARD_BG_SOLID=CARD_BG_SOLID,
         CARD_BORDER=CARD_BORDER,
+        CARD_BORDER_HI=CARD_BORDER_HI,
         CARD_SHADOW=CARD_SHADOW,
         CHART_SHADOW=CHART_SHADOW,
         CHART_SHADOW_HOVER=CHART_SHADOW_HOVER,
@@ -526,20 +597,35 @@ def section_toolbar(title: str, control_fn=None):
 # CHART STYLE HELPERS
 # --------------------------------------------------------------------------
 def chart_layout_2d(height: int = 340, title: str = "") -> dict:
-    """Base layout for 2D charts: transparent bg, pale gridlines, on-brand text."""
+    """
+    Base layout for 2D charts on the dark theme: fully transparent bg
+    (so the frosted glass card shows through), pale-on-dark gridlines,
+    unified hover with spike lines for a genuinely interactive feel,
+    and a smooth transition so re-sorted / re-windowed data animates
+    in rather than snapping.
+    """
     layout = dict(
-        template="plotly_white",
+        template="plotly_dark",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=12),
         margin=dict(t=40 if title else 10, b=10, l=10, r=10),
         height=height,
+        hovermode="x unified",
+        hoverdistance=40,
+        transition=dict(duration=450, easing="cubic-in-out"),
+        uniformtext=dict(minsize=9, mode="hide"),
         xaxis=dict(
             gridcolor=CHART_GRID,
             zerolinecolor=CHART_GRID,
             linecolor=CARD_BORDER,
             tickfont=dict(color=TEXT_MUTED, size=11),
             title_font=dict(color=TEXT_MUTED, size=11),
+            showspikes=True,
+            spikecolor=TEAL_MID,
+            spikethickness=1,
+            spikedash="dot",
+            spikemode="across",
         ),
         yaxis=dict(
             gridcolor=CHART_GRID,
@@ -550,13 +636,13 @@ def chart_layout_2d(height: int = 340, title: str = "") -> dict:
         ),
         legend=dict(
             font=dict(color=TEXT_PRIMARY, size=11),
-            bgcolor="rgba(255,255,255,0.75)",
+            bgcolor="rgba(18,29,46,0.75)",
             bordercolor=CARD_BORDER,
             borderwidth=1,
         ),
         hoverlabel=dict(
-            bgcolor=CARD_BG,
-            bordercolor=CARD_BORDER,
+            bgcolor="#0F1B2D",
+            bordercolor=TEAL_MID,
             font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=12),
         ),
     )
@@ -564,23 +650,24 @@ def chart_layout_2d(height: int = 340, title: str = "") -> dict:
         layout["title"] = dict(
             text=title,
             font=dict(family="Source Serif 4, Georgia, serif",
-                      size=15, color=TEAL_DARK),
+                      size=15, color=TEAL_PALE),
             x=0.01, xanchor="left", y=0.97,
         )
     return layout
 
 
 def chart_layout_3d(height: int = 500, title: str = "") -> dict:
-    """Base layout for 3D charts: transparent bg, muted scene."""
+    """Base layout for 3D charts: transparent bg, glowing dark scene."""
     layout = dict(
-        template="plotly_white",
+        template="plotly_dark",
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=11),
         margin=dict(t=40 if title else 10, b=10, l=10, r=10),
         height=height,
+        transition=dict(duration=450, easing="cubic-in-out"),
         scene=dict(
             xaxis=dict(
-                backgroundcolor="rgba(255,255,255,0.5)",
+                backgroundcolor="rgba(45,212,191,0.03)",
                 gridcolor=CHART_GRID,
                 zerolinecolor=CHART_GRID,
                 showbackground=True,
@@ -588,7 +675,7 @@ def chart_layout_3d(height: int = 500, title: str = "") -> dict:
                 title_font=dict(color=TEXT_MUTED, size=11),
             ),
             yaxis=dict(
-                backgroundcolor="rgba(255,255,255,0.5)",
+                backgroundcolor="rgba(56,189,248,0.03)",
                 gridcolor=CHART_GRID,
                 zerolinecolor=CHART_GRID,
                 showbackground=True,
@@ -596,7 +683,7 @@ def chart_layout_3d(height: int = 500, title: str = "") -> dict:
                 title_font=dict(color=TEXT_MUTED, size=11),
             ),
             zaxis=dict(
-                backgroundcolor="rgba(255,255,255,0.5)",
+                backgroundcolor="rgba(167,139,250,0.03)",
                 gridcolor=CHART_GRID,
                 zerolinecolor=CHART_GRID,
                 showbackground=True,
@@ -605,12 +692,17 @@ def chart_layout_3d(height: int = 500, title: str = "") -> dict:
             ),
             camera=dict(eye=dict(x=1.5, y=1.5, z=1.2)),
         ),
+        hoverlabel=dict(
+            bgcolor="#0F1B2D",
+            bordercolor=TEAL_MID,
+            font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=12),
+        ),
     )
     if title:
         layout["title"] = dict(
             text=title,
             font=dict(family="Source Serif 4, Georgia, serif",
-                      size=15, color=TEAL_DARK),
+                      size=15, color=TEAL_PALE),
             x=0.01, xanchor="left", y=0.97,
         )
     return layout
@@ -630,18 +722,43 @@ def chart_color_sequence_ext():
 
 
 def apply_shadow(fig, marker=True, bar=True):
-    """Add subtle borders to bars/scatter markers for a slight depth effect."""
+    """Add subtle glow-edged borders to bars/scatter markers for depth."""
     if bar:
         fig.update_traces(
-            marker=dict(line=dict(width=0.5, color=CARD_BORDER)),
+            marker=dict(line=dict(width=0.6, color="rgba(255,255,255,0.15)")),
             selector=dict(type="bar"),
         )
     if marker:
         fig.update_traces(
-            marker=dict(line=dict(width=0.5, color="white")),
+            marker=dict(line=dict(width=0.6, color="rgba(255,255,255,0.25)")),
             selector=dict(type="scatter"),
         )
     return fig
+
+
+def enable_rich_interaction(fig, hover_glow: bool = True):
+    """
+    Apply a shared set of "make it feel alive" interaction settings to any
+    figure: unified hover with spikes already come from chart_layout_2d,
+    this layers on click-to-toggle legends, a visible modebar with the
+    zoom/pan/reset tools, and (optionally) a slight marker glow that
+    brightens on hover via opacity contrast.
+    """
+    fig.update_layout(
+        hoverlabel_align="left",
+        legend=dict(itemclick="toggleothers", itemdoubleclick="toggle"),
+    )
+    if hover_glow:
+        fig.update_traces(marker=dict(opacity=0.92), selector=dict(type="bar"))
+    return fig
+
+
+PLOTLY_CONFIG = {
+    "displayModeBar": True,
+    "displaylogo": False,
+    "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+    "scrollZoom": True,
+}
 
 
 # --------------------------------------------------------------------------
@@ -666,10 +783,10 @@ def interpolate_color(c1: str, c2: str, t: float) -> str:
 
 def teal_gradient(values, dark: str = TEAL_DARK, light: str = TEAL_PALE):
     """
-    Map a numeric sequence onto a single-hue teal ramp (light -> dark as
-    the value rises), so bar/line charts that don't carry semantic risk
-    meaning still read as part of the same color family as the rest of
-    the dashboard, while the shading itself reinforces value magnitude.
+    Map a numeric sequence onto a single-hue teal/cyan ramp (pale -> bright
+    accent as the value rises) so non-semantic bar/line charts still read
+    as part of the same glowing accent family as the rest of the dark
+    dashboard, while the shading reinforces value magnitude.
     """
     values = list(values)
     if not values:
@@ -680,6 +797,6 @@ def teal_gradient(values, dark: str = TEAL_DARK, light: str = TEAL_PALE):
 
 
 def teal_gradient_reversed(values, dark: str = TEAL_DARK, light: str = TEAL_PALE):
-    """Same as teal_gradient but darkest at the low end (for "smaller is
+    """Same as teal_gradient but brightest at the low end (for "smaller is
     better" metrics where you still want visual weight on the largest bar)."""
-    return list(reversed(teal_gradient(list(reversed(list(values))), dark, light)))                                              
+    return list(reversed(teal_gradient(list(reversed(list(values))), dark, light)))                                           
