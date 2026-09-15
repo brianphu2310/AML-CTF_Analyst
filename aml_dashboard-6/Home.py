@@ -5,11 +5,13 @@ Portfolio-level overview of the AML Compliance Suite.
 Executive KPI row, portfolio risk distribution, transaction volume trend,
 case load by analyst, customer lifecycle waterfall, and target gauges.
 
-v2: every section now leads with its interactive control (view/window/sort
-toggle) in a toolbar row above the chart, and non-semantic bar charts use
-a harmonized teal gradient instead of a flat single color. Chart "3D style
-shadow" + hover lift is applied globally via theme.py (no per-chart code
-needed here).
+v3 (DARK MODE): runs on theme.py's dark, glassmorphic, glow-shadow theme.
+Every chart now uses unified hover + spike lines (from chart_layout_2d),
+a visible zoom/pan/reset modebar (PLOTLY_CONFIG), legend click-to-isolate
+(enable_rich_interaction), and a smooth transition on re-render so
+toggling a toolbar control animates instead of snapping. Non-semantic
+bar charts use a harmonized cyan/teal glow gradient. Chart "glass card"
+shadow + hover lift + border glow is applied globally via theme.py.
 """
 
 import streamlit as st
@@ -21,6 +23,7 @@ from db_utils import load_all
 from theme import (
     inject_css, page_header, kpi_card, section_title, section_toolbar,
     chart_layout_2d, chart_layout_3d, chart_color_sequence, teal_gradient,
+    enable_rich_interaction, PLOTLY_CONFIG,
     RISK_COLOR_MAP,
     TEAL_DARK, TEAL_MID, TEAL_LIGHT, TEAL_PALE, TEAL_SOFT,
     CRITICAL, HIGH, MEDIUM, LOW, INFO,
@@ -95,11 +98,13 @@ with col1:
     fig.update_traces(
         textposition="outside",
         textfont=dict(color=TEXT_MUTED, size=11),
-        marker=dict(line=dict(width=0.5, color=CARD_BORDER)),
+        marker=dict(line=dict(width=0.6, color="rgba(255,255,255,0.15)")),
+        hovertemplate="<b>%{x}</b><br>%{y:,} customers<extra></extra>",
     )
     fig.update_layout(**chart_layout_2d(height=340))
-    fig.update_layout(showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    fig.update_layout(showlegend=False, hovermode="x")
+    fig = enable_rich_interaction(fig)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 with col2:
     if industry_metric == "Customer Count":
@@ -118,8 +123,8 @@ with col2:
         )
         x_label = "Avg Risk Score"
 
-    # Harmonized teal gradient (light -> dark with magnitude) instead of a
-    # scale that clashes with the risk-level colors on the left.
+    # Harmonized cyan/teal glow gradient (pale -> bright accent with
+    # magnitude) so it reads as part of the same dark-theme accent family.
     bar_colors = teal_gradient(industry_series.values)
 
     fig2 = px.bar(
@@ -129,14 +134,17 @@ with col2:
         labels={"x": x_label, "y": ""},
     )
     fig2.update_traces(
-        marker=dict(color=bar_colors, line=dict(width=0.5, color=CARD_BORDER)),
+        marker=dict(color=bar_colors, line=dict(width=0.6, color="rgba(255,255,255,0.15)")),
         text=[f"{v:,.0f}" if industry_metric == "Customer Count" else f"{v:.1f}"
               for v in industry_series.values],
         textposition="outside",
         textfont=dict(color=TEXT_MUTED, size=11),
+        hovertemplate="<b>%{y}</b><br>" + x_label + ": %{x:,.1f}<extra></extra>",
     )
     fig2.update_layout(**chart_layout_2d(height=340))
-    st.plotly_chart(fig2, use_container_width=True)
+    fig2.update_layout(hovermode="y")
+    fig2 = enable_rich_interaction(fig2)
+    st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
 
 # ==========================================================================
 # TRANSACTION VOLUME TREND
@@ -164,22 +172,29 @@ fig3 = px.area(
     x="txn_date",
     y="amount",
     color="direction",
-    color_discrete_map={"Inbound": TEAL_DARK, "Outbound": TEAL_MID},
+    color_discrete_map={"Inbound": TEAL_MID, "Outbound": "#A78BFA"},
     labels={"txn_date": "Date", "amount": "Total Amount (AUD)"},
 )
 fig3.update_traces(
-    line=dict(width=1.6),
+    line=dict(width=2),
     fillcolor=None,
+    hovertemplate="%{x|%d %b %Y}<br>$%{y:,.0f}<extra></extra>",
 )
-# Add gradient fill manually
+# Glowing gradient fill in the accent colors, tuned for a dark backdrop.
 for trace in fig3.data:
     if trace.name == "Inbound":
-        trace.update(fillcolor="rgba(61,95,110,0.28)")
+        trace.update(fillcolor="rgba(34,211,238,0.22)", line=dict(color=TEAL_MID, width=2))
     elif trace.name == "Outbound":
-        trace.update(fillcolor="rgba(74,110,126,0.22)")
+        trace.update(fillcolor="rgba(167,139,250,0.16)", line=dict(color="#A78BFA", width=2))
 fig3.update_layout(**chart_layout_2d(height=320))
-st.plotly_chart(fig3, use_container_width=True)
-st.caption(f"Showing the trailing {window_label.lower()} of transaction activity.")
+fig3.update_layout(
+    xaxis=dict(rangeslider=dict(visible=True, thickness=0.06,
+                                 bgcolor="rgba(255,255,255,0.04)",
+                                 bordercolor=CARD_BORDER, borderwidth=1)),
+)
+fig3 = enable_rich_interaction(fig3)
+st.plotly_chart(fig3, use_container_width=True, config=PLOTLY_CONFIG)
+st.caption(f"Showing the trailing {window_label.lower()} of transaction activity. Drag the range slider or scroll to zoom.")
 
 # ==========================================================================
 # CUSTOMER LIFECYCLE WATERFALL
@@ -233,13 +248,16 @@ fig_wf = go.Figure(
         textposition="outside",
         textfont=dict(color=TEXT_PRIMARY, size=11),
         connector=dict(line=dict(color=CARD_BORDER, width=1)),
-        increasing=dict(marker=dict(color=TEAL_DARK, line=dict(width=0.5, color=CARD_BORDER))),
-        decreasing=dict(marker=dict(color=HIGH, line=dict(width=0.5, color=CARD_BORDER))),
-        totals=dict(marker=dict(color=TEAL_LIGHT, line=dict(width=0.5, color=CARD_BORDER))),
+        increasing=dict(marker=dict(color=TEAL_MID, line=dict(width=0.6, color="rgba(255,255,255,0.15)"))),
+        decreasing=dict(marker=dict(color=CRITICAL, line=dict(width=0.6, color="rgba(255,255,255,0.15)"))),
+        totals=dict(marker=dict(color="#A78BFA", line=dict(width=0.6, color="rgba(255,255,255,0.15)"))),
+        hovertemplate="<b>%{x}</b><br>%{y:+,}<extra></extra>",
     )
 )
 fig_wf.update_layout(**chart_layout_2d(height=380))
-st.plotly_chart(fig_wf, use_container_width=True)
+fig_wf.update_layout(hovermode="x")
+fig_wf = enable_rich_interaction(fig_wf, hover_glow=False)
+st.plotly_chart(fig_wf, use_container_width=True, config=PLOTLY_CONFIG)
 
 # ==========================================================================
 # TARGET GAUGES
@@ -250,12 +268,12 @@ g1, g2, g3 = st.columns(3)
 
 
 def _gauge(value, title, target, color, suffix="%"):
-    """Small radial gauge with a target threshold line."""
+    """Small radial gauge, glowing needle bar, dark steps, target threshold line."""
     fig = go.Figure(
         go.Indicator(
             mode="gauge+number",
             value=value,
-            number={"suffix": suffix, "font": {"color": TEAL_DARK, "size": 28,
+            number={"suffix": suffix, "font": {"color": "#F5FAFA", "size": 30,
                                                "family": "Source Serif 4, Georgia, serif"}},
             title={"text": title, "font": {"color": TEXT_MUTED, "size": 12}},
             gauge={
@@ -265,13 +283,13 @@ def _gauge(value, title, target, color, suffix="%"):
                     "tickfont": {"color": TEXT_MUTED, "size": 10},
                 },
                 "bar": {"color": color, "thickness": 0.28},
-                "bgcolor": "rgba(255,255,255,0.4)",
+                "bgcolor": "rgba(255,255,255,0.03)",
                 "borderwidth": 1,
                 "bordercolor": CARD_BORDER,
                 "steps": [
-                    {"range": [0, 40], "color": "rgba(220,232,236,0.35)"},
-                    {"range": [40, 70], "color": "rgba(168,196,206,0.35)"},
-                    {"range": [70, 100], "color": "rgba(123,168,184,0.35)"},
+                    {"range": [0, 40], "color": "rgba(148,178,214,0.08)"},
+                    {"range": [40, 70], "color": "rgba(148,178,214,0.14)"},
+                    {"range": [70, 100], "color": "rgba(148,178,214,0.20)"},
                 ],
                 "threshold": {
                     "line": {"color": CRITICAL, "width": 3},
@@ -286,28 +304,29 @@ def _gauge(value, title, target, color, suffix="%"):
         font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY),
         margin=dict(t=40, b=10, l=20, r=20),
         height=260,
+        transition=dict(duration=450, easing="cubic-in-out"),
     )
     return fig
 
 
 # Metric 1: % of book flagged at high/critical risk
 pct_high = high_risk / len(customers) * 100 if len(customers) else 0
-g1.plotly_chart(_gauge(pct_high, "% High / Critical Risk", target=15, color=TEAL_DARK),
-                use_container_width=True)
+g1.plotly_chart(_gauge(pct_high, "% High / Critical Risk", target=15, color=TEAL_MID),
+                use_container_width=True, config=PLOTLY_CONFIG)
 
 # Metric 2: % of screening hits that are resolved (cleared or escalated)
 total_screening = len(screening)
 resolved = int(screening["status"].isin(["Cleared - False Positive", "Escalated"]).sum())
 pct_resolved = resolved / total_screening * 100 if total_screening else 0
-g2.plotly_chart(_gauge(pct_resolved, "% Screening Hits Resolved", target=80, color=TEAL_MID),
-                use_container_width=True)
+g2.plotly_chart(_gauge(pct_resolved, "% Screening Hits Resolved", target=80, color="#A78BFA"),
+                use_container_width=True, config=PLOTLY_CONFIG)
 
 # Metric 3: % of cases that have reached a terminal state
 total_cases = len(cases)
 closed_cases = int(cases["status"].str.contains("Closed").sum())
 pct_closed = closed_cases / total_cases * 100 if total_cases else 0
-g3.plotly_chart(_gauge(pct_closed, "% Cases Closed", target=60, color=TEAL_LIGHT),
-                use_container_width=True)
+g3.plotly_chart(_gauge(pct_closed, "% Cases Closed", target=60, color=LOW),
+                use_container_width=True, config=PLOTLY_CONFIG)
 
 # ==========================================================================
 # CASE LOAD BY ANALYST
@@ -334,12 +353,15 @@ fig4 = px.bar(
     text=load_by_analyst.values,
 )
 fig4.update_traces(
-    marker=dict(color=teal_gradient(load_by_analyst.values), line=dict(width=0.5, color=CARD_BORDER)),
+    marker=dict(color=teal_gradient(load_by_analyst.values), line=dict(width=0.6, color="rgba(255,255,255,0.15)")),
     textposition="outside",
     textfont=dict(color=TEXT_MUTED, size=11),
+    hovertemplate="<b>%{x}</b><br>%{y:,} cases<extra></extra>",
 )
 fig4.update_layout(**chart_layout_2d(height=300))
-st.plotly_chart(fig4, use_container_width=True)
+fig4.update_layout(hovermode="x")
+fig4 = enable_rich_interaction(fig4)
+st.plotly_chart(fig4, use_container_width=True, config=PLOTLY_CONFIG)
 
 st.info(
     "Use the sidebar to navigate the full lifecycle: **Customer Risk**, **Screening**, "
