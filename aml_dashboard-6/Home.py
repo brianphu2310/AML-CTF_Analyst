@@ -249,4 +249,4 @@ st.info(
     "**Business KYC**, **New Client Onboarding**, **Periodic Review**, **Audit Trail**, and the "
     "**Process Map** for a full walk-through of every stage."
 )
-)
+
