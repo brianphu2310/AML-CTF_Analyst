@@ -2,7 +2,7 @@ import streamlit as st
 
 from theme import inject_css, page_header, section_title, NAVY, BRASS, MUTED
 
-st.set_page_config(page_title="Process Map | AML Suite", page_icon="🗺️", layout="wide")
+st.set_page_config(page_title="Process Map | AML Suite", layout="wide")
 inject_css()
 page_header(
     "AML/CTF Process Map",
@@ -66,7 +66,7 @@ PHASES = [
 ]
 
 total_steps = sum(len(p["steps"]) for p in PHASES)
-st.info(f"**{total_steps} stages** across **{len(PHASES)} phases**, each backed by a working page in this suite.", icon="🗺️")
+st.info(f"**{total_steps} stages** across **{len(PHASES)} phases**, each backed by a working page in this suite.")
 
 for phase in PHASES:
     section_title(phase["title"])
@@ -76,7 +76,7 @@ for phase in PHASES:
             st.markdown(f"**{name}**  \n<span style='color:{MUTED};font-size:0.88rem;'>{desc}</span>",
                         unsafe_allow_html=True)
         with c2:
-            st.page_link(f"pages/{page}", label="Open page →")
+            st.page_link(f"pages/{page}", label="Open page")
     st.write("")
 
 st.caption(
