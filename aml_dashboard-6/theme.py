@@ -269,7 +269,7 @@ div[data-testid="stPlotlyChart"] {{
     border: 1px solid {CARD_BORDER};
     border-radius: 10px;
     box-shadow: {CHART_SHADOW};
-    padding: 0.9rem 1rem 0.3rem 1rem;
+    padding: 0.75rem;
     transition: box-shadow 0.25s ease, transform 0.25s ease;
 }}
 div[data-testid="stPlotlyChart"]:hover {{
@@ -634,12 +634,24 @@ def _cuboid_trace(x0, x1, y0, y1, z0, z1, color, opacity=1.0, hover=None):
     )
 
 
+def _flat_camera(x, y, z, projection: str = "orthographic"):
+    """
+    Shared camera builder for every 3D scene. Orthographic projection
+    removes the vanishing-point distortion of a perspective camera, so
+    bars/ribbons read as clean, gently-tilted diagrams rather than a
+    dramatic, gimmicky 3D render - while staying genuinely draggable
+    and zoomable. Eye vectors across the chart engine are tuned to be
+    flatter (more top-down, less oblique) than earlier versions.
+    """
+    return dict(eye=dict(x=x, y=y, z=z), projection=dict(type=projection))
+
+
 def _base_scene_layout(height, title=""):
     layout = dict(
         template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=11),
-        margin=dict(t=40 if title else 10, b=10, l=10, r=10),
+        margin=dict(t=40 if title else 8, b=8, l=8, r=8),
         height=height,
         scene=dict(
             xaxis=dict(backgroundcolor="rgba(31,94,91,0.03)", gridcolor=CHART_GRID, zerolinecolor=CHART_GRID,
@@ -648,7 +660,10 @@ def _base_scene_layout(height, title=""):
                        showbackground=True, tickfont=dict(color=TEXT_MUTED, size=10), title_font=dict(color=TEXT_MUTED, size=11)),
             zaxis=dict(backgroundcolor="rgba(31,94,91,0.03)", gridcolor=CHART_GRID, zerolinecolor=CHART_GRID,
                        showbackground=True, tickfont=dict(color=TEXT_MUTED, size=10), title_font=dict(color=TEXT_MUTED, size=11)),
-            camera=dict(eye=dict(x=1.5, y=1.5, z=1.2)),
+            camera=_flat_camera(1.35, 1.35, 1.55),
+            # Full-bleed domain so the scene fills its card edge-to-edge
+            # instead of floating off-center inside the plot area.
+            domain=dict(x=[0, 1], y=[0, 1]),
         ),
     )
     if title:
@@ -663,8 +678,14 @@ def chart_layout_3d(height: int = 500, title: str = "") -> dict:
 
 
 def bar3d_chart(categories, values, colors=None, height=420, value_fmt=None,
-                 bar_ratio=0.55, depth_ratio=0.75, camera=None, shadow=True, z_title=""):
-    """A genuine 3D extruded bar chart (Mesh3d), rotatable and zoomable."""
+                 bar_ratio=0.62, depth_ratio=0.5, camera=None, shadow=True, z_title=""):
+    """
+    A 3D extruded bar chart (Mesh3d), rotatable and zoomable. Bars are
+    intentionally wide and shallow (high bar_ratio, low depth_ratio)
+    rather than chunky cubes, and the camera is a flat, orthographic
+    near-top-down view by default - genuine 3D geometry, without the
+    exaggerated, gimmicky tilt of a dramatic perspective render.
+    """
     categories = list(categories)
     values = [float(v) for v in values]
     n = max(len(categories), 1)
@@ -682,9 +703,9 @@ def bar3d_chart(categories, values, colors=None, height=420, value_fmt=None,
         fmt_val = value_fmt(val) if value_fmt else f"{val:,.0f}"
         if shadow:
             traces.append(_cuboid_trace(
-                idx - half_w - 0.06, idx + half_w + 0.06,
-                -half_d - 0.06, half_d + 0.06, -top_val * 0.015, 0,
-                color="rgba(74,52,28,0.28)",
+                idx - half_w - 0.03, idx + half_w + 0.03,
+                -half_d - 0.03, half_d + 0.03, -top_val * 0.01, 0,
+                color="rgba(74,52,28,0.18)",
             ))
         traces.append(_cuboid_trace(
             idx - half_w, idx + half_w, -half_d, half_d, 0, z1,
@@ -705,16 +726,16 @@ def bar3d_chart(categories, values, colors=None, height=420, value_fmt=None,
     layout["scene"]["xaxis"].update(tickvals=list(range(len(categories))), ticktext=categories, title=dict(text=""))
     layout["scene"]["yaxis"].update(showticklabels=False, title=dict(text=""), showbackground=False)
     layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = camera or dict(eye=dict(x=1.55, y=-1.9, z=0.95))
+    layout["scene"]["camera"] = camera or _flat_camera(1.05, -1.35, 1.5)
     layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=max(1.1, n / 3.2), y=0.85, z=1.05)
+    layout["scene"]["aspectratio"] = dict(x=max(1.1, n / 3.2), y=0.8, z=0.85)
     fig.update_layout(**layout)
     fig.update_layout(showlegend=False)
     return fig
 
 
 def grouped_bar3d_chart(categories, series: dict, colors: dict = None, height=420,
-                         value_fmt=None, bar_ratio=0.30, gap=0.06, z_title=""):
+                         value_fmt=None, bar_ratio=0.34, gap=0.05, z_title=""):
     """
     A 3D grouped bar chart: each category on the x-axis holds one small
     extruded bar per series, arranged side-by-side along y. Use this in
@@ -746,8 +767,8 @@ def grouped_bar3d_chart(categories, series: dict, colors: dict = None, height=42
             z1 = max(val, top_val * 0.006)
             fmt_val = value_fmt(val) if value_fmt else f"{val:,.0f}"
             traces.append(_cuboid_trace(
-                c_idx - half_w - 0.03, c_idx + half_w + 0.03, y0 - 0.02, y1 - 0.02, -top_val * 0.012, 0,
-                color="rgba(74,52,28,0.22)",
+                c_idx - half_w - 0.02, c_idx + half_w + 0.02, y0 - 0.01, y1 - 0.01, -top_val * 0.008, 0,
+                color="rgba(74,52,28,0.15)",
             ))
             traces.append(_cuboid_trace(
                 c_idx - half_w, c_idx + half_w, y0, y1, 0, z1,
@@ -767,9 +788,9 @@ def grouped_bar3d_chart(categories, series: dict, colors: dict = None, height=42
     layout["scene"]["xaxis"].update(tickvals=list(range(len(categories))), ticktext=categories, title=dict(text=""))
     layout["scene"]["yaxis"].update(showticklabels=False, title=dict(text=""), showbackground=False)
     layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = dict(eye=dict(x=1.6, y=-1.9, z=0.95))
+    layout["scene"]["camera"] = _flat_camera(1.1, -1.35, 1.5)
     layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=max(1.1, len(categories) / 3.2), y=0.95, z=1.05)
+    layout["scene"]["aspectratio"] = dict(x=max(1.1, len(categories) / 3.2), y=0.85, z=0.85)
     fig.update_layout(**layout)
     fig.update_layout(legend=dict(font=dict(color=TEXT_PRIMARY, size=11), bgcolor="rgba(255,255,255,0.85)",
                                    bordercolor=CARD_BORDER, borderwidth=1, x=0.01, y=0.99))
@@ -798,9 +819,9 @@ def target_bar3d(value, target, label, color, max_value=100, height=280, suffix=
     layout["scene"]["xaxis"].update(visible=False)
     layout["scene"]["yaxis"].update(visible=False)
     layout["scene"]["zaxis"].update(range=[0, max_value], title=dict(text=""))
-    layout["scene"]["camera"] = dict(eye=dict(x=1.7, y=-1.7, z=0.7))
+    layout["scene"]["camera"] = _flat_camera(1.15, -1.15, 1.5)
     layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=0.6, y=0.6, z=1.3)
+    layout["scene"]["aspectratio"] = dict(x=0.75, y=0.75, z=1.05)
     fig.update_layout(**layout)
     fig.update_layout(showlegend=False,
                        title=dict(text=label, font=dict(family="Inter, sans-serif", size=12, color=TEXT_MUTED),
@@ -809,8 +830,13 @@ def target_bar3d(value, target, label, color, max_value=100, height=280, suffix=
 
 
 def ribbon3d_chart(x_labels, series: dict, height=380, z_title="Amount"):
-    """A 3D Surface ribbon for two or more time series - a rotatable
-    replacement for a flat area/line trend chart."""
+    """
+    A 3D Surface ribbon for two or more time series - a rotatable
+    replacement for a flat area/line trend chart. The surface is kept
+    gently sloped rather than sharply peaked (flatter camera, reduced
+    z-stretch, softer lighting) so the underlying trend stays readable
+    at a glance instead of reading as a dramatic mountain range.
+    """
     names = list(series.keys())
     n = len(x_labels)
     z = [list(series[name]) for name in names]
@@ -822,7 +848,7 @@ def ribbon3d_chart(x_labels, series: dict, height=380, z_title="Amount"):
     fig = go.Figure(data=[go.Surface(
         x=x, y=y, z=z, colorscale=colorscale, showscale=False, opacity=0.94,
         contours=dict(z=dict(show=True, usecolormap=True, project_z=True, width=1)),
-        lighting=dict(ambient=0.55, diffuse=0.8, specular=0.45, roughness=0.45),
+        lighting=dict(ambient=0.68, diffuse=0.55, specular=0.2, roughness=0.6),
     )])
 
     step = max(1, n // 6)
@@ -831,9 +857,9 @@ def ribbon3d_chart(x_labels, series: dict, height=380, z_title="Amount"):
     layout["scene"]["xaxis"].update(tickvals=tick_idx, ticktext=[str(x_labels[i]) for i in tick_idx], title=dict(text=""))
     layout["scene"]["yaxis"].update(tickvals=y, ticktext=names, title=dict(text=""))
     layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = dict(eye=dict(x=1.7, y=-1.9, z=0.9))
+    layout["scene"]["camera"] = _flat_camera(1.15, -1.35, 1.6)
     layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=1.7, y=0.5, z=0.8)
+    layout["scene"]["aspectratio"] = dict(x=1.6, y=0.45, z=0.5)
     fig.update_layout(**layout)
     return fig
 
@@ -887,9 +913,9 @@ def waterfall3d_chart(labels, values, height=420, colors=None):
     layout["scene"]["xaxis"].update(tickvals=list(range(len(labels))), ticktext=labels, title=dict(text=""))
     layout["scene"]["yaxis"].update(visible=False)
     layout["scene"]["zaxis"].update(title=dict(text=""))
-    layout["scene"]["camera"] = dict(eye=dict(x=1.7, y=-2.0, z=0.85))
+    layout["scene"]["camera"] = _flat_camera(1.15, -1.4, 1.55)
     layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=2.1, y=0.4, z=1.0)
+    layout["scene"]["aspectratio"] = dict(x=2.0, y=0.35, z=0.8)
     fig.update_layout(**layout)
     fig.update_layout(showlegend=False)
     return fig
@@ -926,7 +952,7 @@ def scatter3d_chart(x, y, z, color_labels=None, color_map=None, size=None,
     layout["scene"]["xaxis"].update(title=dict(text=x_title))
     layout["scene"]["yaxis"].update(title=dict(text=y_title))
     layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = dict(eye=dict(x=1.6, y=-1.8, z=0.9))
+    layout["scene"]["camera"] = _flat_camera(1.15, -1.35, 1.5)
     fig.update_layout(**layout)
     fig.update_layout(legend=dict(font=dict(color=TEXT_PRIMARY, size=11), bgcolor="rgba(255,255,255,0.85)",
                                    bordercolor=CARD_BORDER, borderwidth=1))
@@ -986,7 +1012,7 @@ def network3d_chart(center_label, center_kind, nodes, color_map, height=460):
     layout["scene"]["xaxis"].update(visible=False)
     layout["scene"]["yaxis"].update(visible=False)
     layout["scene"]["zaxis"].update(title=dict(text="Ownership"))
-    layout["scene"]["camera"] = dict(eye=dict(x=1.8, y=-1.8, z=1.1))
+    layout["scene"]["camera"] = _flat_camera(1.25, -1.25, 1.6)
     fig.update_layout(**layout)
     fig.update_layout(showlegend=False)
-    return fig                  
+    return fig
