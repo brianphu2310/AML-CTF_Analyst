@@ -6,7 +6,7 @@ from report_utils import build_smr, smr_to_docx_bytes
 from theme import inject_css, page_header, section_title, risk_pill
 from workflow_utils import init_state, log_audit, CASE_STATUSES, SENIOR_DECISIONS, status_pill_html
 
-st.set_page_config(page_title="Case Management & SMR | AML Suite", page_icon="🗂️", layout="wide")
+st.set_page_config(page_title="Case Management & SMR | AML Suite", layout="wide")
 inject_css()
 page_header(
     "Case Management, Investigation & SMR",
@@ -34,8 +34,8 @@ merged_cases = cases_live.merge(
 )
 
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["🗂️ Investigation Queue", "🔍 Investigation Workspace", "⬆️ Escalation & Senior Review",
-     "🧾 SMR Assessment, Drafting & Submission"]
+    ["Investigation Queue", "Investigation Workspace", "Escalation & Senior Review",
+     "SMR Assessment, Drafting & Submission"]
 )
 
 # ================================================================== TAB 1
@@ -151,19 +151,19 @@ with tab2:
 
             act1, act2, act3 = st.columns(3)
             with act1:
-                if st.button("💾 Save Notes", use_container_width=True):
+                if st.button("Save Notes", use_container_width=True):
                     update_case(case_id, sof_review_notes=sof_input)
                     log_audit("Investigation Notes Updated", "Case", case_id, "SOF/SOW review notes saved.")
                     st.success("Notes saved.")
             with act2:
-                if st.button("✅ Close - False Positive", use_container_width=True):
+                if st.button("Close - False Positive", use_container_width=True):
                     update_case(case_id, status="Closed - No Action", senior_decision="Close Case",
                                 sof_review_notes=sof_input)
                     log_audit("Case Closed", "Case", case_id, "Closed at investigation stage - false positive, no reasonable grounds for suspicion.")
                     st.success("Case closed as false positive.")
                     st.rerun()
             with act3:
-                if st.button("⬆️ Escalate to Senior Review", type="primary", use_container_width=True):
+                if st.button("Escalate to Senior Review", type="primary", use_container_width=True):
                     update_case(case_id, status="Escalated - Senior Review", sof_review_notes=sof_input,
                                 escalated_to="MLRO - K. Whitfield")
                     log_audit("Case Escalated", "Case", case_id,
@@ -267,7 +267,7 @@ with tab4:
                 "I have reasonable grounds to suspect this matter is relevant to money laundering / "
                 "terrorism financing (AML/CTF Act s.41)"
             )
-            generate = st.button("🧾 Generate SMR Narrative", type="primary", use_container_width=True,
+            generate = st.button("Generate SMR Narrative", type="primary", use_container_width=True,
                                   disabled=not reasonable_grounds)
             if not reasonable_grounds:
                 st.caption("Confirm reasonable grounds for suspicion to enable drafting.")
@@ -295,13 +295,13 @@ with tab4:
             dl1, dl2 = st.columns(2)
             with dl1:
                 st.download_button(
-                    "⬇️ Download as .txt", report.full_text().encode(),
+                    "Download as .txt", report.full_text().encode(),
                     file_name=f"{report.reference}.txt", mime="text/plain", use_container_width=True,
                 )
             with dl2:
                 docx_bytes = smr_to_docx_bytes(report)
                 st.download_button(
-                    "⬇️ Download as .docx", docx_bytes, file_name=f"{report.reference}.docx",
+                    "Download as .docx", docx_bytes, file_name=f"{report.reference}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     use_container_width=True,
                 )
@@ -310,7 +310,6 @@ with tab4:
                 "This is a system-generated draft to accelerate case review. A qualified compliance officer / "
                 "MLRO must verify all details, complete bracketed fields, and approve the report before it is "
                 "lodged with AUSTRAC via AUSTRAC Online. Do not submit unedited system output.",
-                icon="⚠️",
             )
 
             st.divider()
@@ -326,7 +325,7 @@ with tab4:
                         st.rerun()
             else:
                 ref_input = st.text_input("AUSTRAC lodgement reference", value=report.reference)
-                lodged = st.button("📤 Mark as Lodged with AUSTRAC", type="primary")
+                lodged = st.button("Mark as Lodged with AUSTRAC", type="primary")
                 if lodged:
                     update_case(
                         chosen_case_id, status="SMR Lodged", smr_reference=ref_input,
