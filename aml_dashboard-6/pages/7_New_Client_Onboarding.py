@@ -5,7 +5,7 @@ from db_utils import load_all
 from onboarding_utils import run_screening, score_onboarding, cdd_record_text, cdd_record_to_docx_bytes
 from theme import inject_css, page_header, section_title, risk_pill
 
-st.set_page_config(page_title="New Client Onboarding | AML Suite", page_icon="🧾", layout="wide")
+st.set_page_config(page_title="New Client Onboarding | AML Suite", layout="wide")
 inject_css()
 page_header(
     "New Client Onboarding",
@@ -38,11 +38,11 @@ cols = st.columns(len(STEPS))
 for i, (col, label) in enumerate(zip(cols, STEPS)):
     with col:
         if i < st.session_state.onb_step:
-            st.markdown(f"✅ **{label}**")
+            st.markdown(f"**{label}**")
         elif i == st.session_state.onb_step:
-            st.markdown(f"🔵 **{label}**")
+            st.markdown(f"**{label}**")
         else:
-            st.markdown(f"⚪ {label}")
+            st.markdown(f"{label}")
 st.progress((st.session_state.onb_step) / (len(STEPS) - 1))
 st.divider()
 
@@ -67,7 +67,7 @@ if step == 0:
         "This determines which identification and verification questions are asked next, and feeds into "
         "the initial risk assessment (non face-to-face onboarding carries elevated impersonation/fraud risk)."
     )
-    if st.button("Next →", type="primary"):
+    if st.button("Next", type="primary"):
         answers["customer_type"] = ctype
         answers["verification_method"] = delivery
         goto(1)
@@ -112,8 +112,8 @@ elif step == 1:
         )
 
         c1, c2 = st.columns(2)
-        back = c1.form_submit_button("← Back")
-        forward = c2.form_submit_button("Next →", type="primary")
+        back = c1.form_submit_button("Back")
+        forward = c2.form_submit_button("Next", type="primary")
 
     if back:
         goto(0)
@@ -149,10 +149,10 @@ elif step == 2:
     if answers.get("customer_type") != "Business":
         st.info("Not applicable for individual customers - beneficial ownership only applies to business entities.")
         c1, c2 = st.columns(2)
-        if c1.button("← Back"):
+        if c1.button("Back"):
             goto(1)
             st.rerun()
-        if c2.button("Next →", type="primary"):
+        if c2.button("Next", type="primary"):
             answers["ubos"] = []
             goto(3)
             st.rerun()
@@ -179,10 +179,10 @@ elif step == 2:
             st.warning(f"Total ownership currently sums to {total_pct:.0f}% - please check the entries.")
 
         c1, c2 = st.columns(2)
-        if c1.button("← Back"):
+        if c1.button("Back"):
             goto(1)
             st.rerun()
-        if c2.button("Next →", type="primary"):
+        if c2.button("Next", type="primary"):
             answers["ubos"] = edited.fillna({"name": "", "nationality": "Australia"}).to_dict("records")
             goto(3)
             st.rerun()
@@ -220,8 +220,8 @@ elif step == 3:
         cash_intensive = st.checkbox("This is (or the business operates as) a cash-intensive business")
 
         c1, c2 = st.columns(2)
-        back = c1.form_submit_button("← Back")
-        forward = c2.form_submit_button("Next →", type="primary")
+        back = c1.form_submit_button("Back")
+        forward = c2.form_submit_button("Next", type="primary")
 
     if back:
         goto(2)
@@ -270,10 +270,10 @@ elif step == 4:
 
     st.divider()
     c1, c2 = st.columns(2)
-    if c1.button("← Back to edit"):
+    if c1.button("Back to edit"):
         goto(3)
         st.rerun()
-    run = c2.button("🚦 Run Onboarding Compliance Checks", type="primary", use_container_width=True)
+    run = c2.button("Run Onboarding Compliance Checks", type="primary", use_container_width=True)
 
     if run:
         with st.spinner("Screening against PEP / Sanctions / Adverse Media lists and calculating risk score..."):
@@ -290,8 +290,7 @@ elif step == 4:
         m1.markdown(f"**Risk score:** {result.score}/100  \n**Risk rating:** {risk_pill(result.risk_level)}",
                     unsafe_allow_html=True)
         m2.markdown(f"**CDD tier required:**  \n{result.cdd_tier}")
-        decision_color = "🟥" if "DO NOT" in result.decision else ("🟧" if result.risk_level in ("High", "Critical") else "🟩")
-        m3.markdown(f"**Decision:**  \n{decision_color} {result.decision}")
+        m3.markdown(f"**Decision:**  \n{result.decision}")
 
         section_title("Screening Results")
         if result.screening_hits:
@@ -306,15 +305,13 @@ elif step == 4:
             st.warning(
                 "This customer requires **Enhanced Due Diligence** before the account is activated: verify "
                 "source of wealth documentation, obtain senior management / MLRO approval, and set an initial "
-                "review date of no more than 6 months.",
-                icon="⚠️",
+                "review date of no more than 6 months."
             )
         if any(h["type"] == "Sanctions" for h in result.screening_hits):
             st.error(
                 "Potential sanctions match identified. Do not provide any service to this customer until the "
                 "match has been manually reviewed and cleared by the MLRO, in line with the AML/CTF Act's "
-                "sanctions obligations.",
-                icon="🚨",
+                "sanctions obligations."
             )
 
         section_title("Customer Due Diligence Record")
@@ -323,19 +320,19 @@ elif step == 4:
         dl1, dl2, dl3 = st.columns(3)
         with dl1:
             st.download_button(
-                "⬇️ Download as .txt", cdd_record_text(answers, result).encode(),
+                "Download as .txt", cdd_record_text(answers, result).encode(),
                 file_name=f"CDD_{answers.get('full_name','client').replace(' ','_')}.txt",
                 mime="text/plain", use_container_width=True,
             )
         with dl2:
             st.download_button(
-                "⬇️ Download as .docx", cdd_record_to_docx_bytes(answers, result),
+                "Download as .docx", cdd_record_to_docx_bytes(answers, result),
                 file_name=f"CDD_{answers.get('full_name','client').replace(' ','_')}.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 use_container_width=True,
             )
         with dl3:
-            if st.button("🔄 Start New Onboarding", use_container_width=True):
+            if st.button("Start New Onboarding", use_container_width=True):
                 st.session_state.onb_step = 0
                 st.session_state.onb_answers = {"ubos": []}
                 st.session_state.onb_result = None
