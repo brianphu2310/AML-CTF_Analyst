@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from db_utils import load_all
-from theme import inject_css, page_header, section_title
+from theme import inject_css, page_header, section_title, bar3d_chart, teal_gradient
 from workflow_utils import full_audit_log
 
-st.set_page_config(page_title="Audit Trail | AML Suite", page_icon="📜", layout="wide")
+st.set_page_config(page_title="Audit Trail | AML Suite", layout="wide")
 inject_css()
 page_header(
     "Record Keeping & Audit Trail",
@@ -47,11 +46,15 @@ c3.metric("Distinct Entities Touched", df["entity_id"].nunique())
 c4.metric("This Session", len(st.session_state.get("audit_log_live", [])))
 
 section_title("Activity by Entity Type")
+st.caption("Drag to rotate, scroll to zoom, hover any bar for its exact count.")
 counts = log["entity_type"].value_counts()
-fig = px.bar(x=counts.index, y=counts.values, labels={"x": "Entity Type", "y": "Log Entries"})
-fig.update_traces(marker_color="#1E3A5F")
-fig.update_layout(template="plotly_white", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                   margin=dict(t=10, b=10, l=10, r=10), height=280)
+fig = bar3d_chart(
+    categories=list(counts.index),
+    values=list(counts.values),
+    colors=teal_gradient(counts.values),
+    z_title="Log Entries",
+    height=320,
+)
 st.plotly_chart(fig, use_container_width=True)
 
 section_title(f"Audit Log ({len(df):,} entries)")
@@ -65,7 +68,7 @@ st.dataframe(display[["Timestamp", "Actor", "Action", "Entity Type", "Entity ID"
              use_container_width=True, hide_index=True, height=520)
 
 st.download_button(
-    "⬇️ Export filtered log (CSV)",
+    "Export filtered log (CSV)",
     df.to_csv(index=False).encode(),
     file_name="aml_audit_trail_export.csv",
     mime="text/csv",
