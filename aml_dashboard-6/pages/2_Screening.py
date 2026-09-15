@@ -1,10 +1,9 @@
 import streamlit as st
-import plotly.express as px
 
 from db_utils import load_all
-from theme import inject_css, page_header, section_title, risk_pill
+from theme import inject_css, page_header, section_title, risk_pill, bar3d_chart, teal_gradient
 
-st.set_page_config(page_title="Screening | AML Suite", page_icon="🔍", layout="wide")
+st.set_page_config(page_title="Screening | AML Suite", layout="wide")
 inject_css()
 page_header("PEP, Sanctions & Adverse Media Screening", "Watchlist match review and disposition queue.", "SCREENING")
 
@@ -33,19 +32,28 @@ c3.metric("Escalated", int((merged["status"] == "Escalated").sum()))
 c4.metric("Cleared (False Positive)", int(merged["status"].str.contains("Cleared").sum()))
 
 section_title("Hits by Type and Status")
+st.caption("Drag to rotate, scroll to zoom, hover any bar for its exact count.")
 col1, col2 = st.columns(2)
 with col1:
-    fig = px.pie(df, names="match_type", hole=0.5,
-                 color="match_type",
-                 color_discrete_map={"PEP": "#2A4E73", "Sanctions": "#B5541F", "Adverse Media": "#8A6D1D"})
-    fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, b=10, l=10, r=10), height=320)
+    type_counts = df["match_type"].value_counts()
+    type_color_map = {"PEP": "#2C6E68", "Sanctions": "#B5651D", "Adverse Media": "#9C7A24"}
+    fig = bar3d_chart(
+        categories=list(type_counts.index),
+        values=list(type_counts.values),
+        colors=[type_color_map.get(t, "#1F5E5B") for t in type_counts.index],
+        z_title="Hits",
+        height=340,
+    )
     st.plotly_chart(fig, use_container_width=True)
 with col2:
     status_counts = df["status"].value_counts()
-    fig2 = px.bar(x=status_counts.index, y=status_counts.values, labels={"x": "Status", "y": "Count"})
-    fig2.update_traces(marker_color="#1E3A5F")
-    fig2.update_layout(template="plotly_white", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                        margin=dict(t=10, b=10, l=10, r=10), height=320)
+    fig2 = bar3d_chart(
+        categories=list(status_counts.index),
+        values=list(status_counts.values),
+        colors=teal_gradient(status_counts.values),
+        z_title="Count",
+        height=340,
+    )
     st.plotly_chart(fig2, use_container_width=True)
 
 section_title(f"Alert Queue ({len(df):,} results)")
