@@ -4,6 +4,12 @@ Portfolio-level overview of the AML Compliance Suite.
 
 Executive KPI row, portfolio risk distribution, transaction volume trend,
 case load by analyst, customer lifecycle waterfall, and target gauges.
+
+v2: every section now leads with its interactive control (view/window/sort
+toggle) in a toolbar row above the chart, and non-semantic bar charts use
+a harmonized teal gradient instead of a flat single color. Chart "3D style
+shadow" + hover lift is applied globally via theme.py (no per-chart code
+needed here).
 """
 
 import streamlit as st
@@ -13,8 +19,8 @@ import plotly.graph_objects as go
 
 from db_utils import load_all
 from theme import (
-    inject_css, page_header, kpi_card, section_title,
-    chart_layout_2d, chart_layout_3d, chart_color_sequence,
+    inject_css, page_header, kpi_card, section_title, section_toolbar,
+    chart_layout_2d, chart_layout_3d, chart_color_sequence, teal_gradient,
     RISK_COLOR_MAP,
     TEAL_DARK, TEAL_MID, TEAL_LIGHT, TEAL_PALE, TEAL_SOFT,
     CRITICAL, HIGH, MEDIUM, LOW, INFO,
@@ -60,7 +66,15 @@ with c5:
 # ==========================================================================
 # PORTFOLIO RISK DISTRIBUTION  +  INDUSTRY RISK
 # ==========================================================================
-section_title("Portfolio Risk Distribution")
+industry_metric = section_toolbar(
+    "Portfolio Risk Distribution",
+    lambda: st.radio(
+        "Industry metric", ["Avg Risk Score", "Customer Count"],
+        index=0, horizontal=True, label_visibility="collapsed",
+        key="industry_metric_toggle",
+    ),
+)
+
 col1, col2 = st.columns([1.1, 1])
 
 with col1:
@@ -88,31 +102,57 @@ with col1:
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    industry_risk = (
-        customers.groupby("industry")["risk_score"]
-        .mean()
-        .sort_values(ascending=True)
-        .tail(8)
-    )
+    if industry_metric == "Customer Count":
+        industry_series = (
+            customers.groupby("industry").size()
+            .sort_values(ascending=True)
+            .tail(8)
+        )
+        x_label = "Customers"
+    else:
+        industry_series = (
+            customers.groupby("industry")["risk_score"]
+            .mean()
+            .sort_values(ascending=True)
+            .tail(8)
+        )
+        x_label = "Avg Risk Score"
+
+    # Harmonized teal gradient (light -> dark with magnitude) instead of a
+    # scale that clashes with the risk-level colors on the left.
+    bar_colors = teal_gradient(industry_series.values)
+
     fig2 = px.bar(
-        x=industry_risk.values,
-        y=industry_risk.index,
+        x=industry_series.values,
+        y=industry_series.index,
         orientation="h",
-        labels={"x": "Avg Risk Score", "y": ""},
-        color=industry_risk.values,
-        color_continuous_scale=[LOW, MEDIUM, HIGH, CRITICAL],
+        labels={"x": x_label, "y": ""},
     )
-    fig2.update_traces(marker=dict(line=dict(width=0.5, color=CARD_BORDER)))
+    fig2.update_traces(
+        marker=dict(color=bar_colors, line=dict(width=0.5, color=CARD_BORDER)),
+        text=[f"{v:,.0f}" if industry_metric == "Customer Count" else f"{v:.1f}"
+              for v in industry_series.values],
+        textposition="outside",
+        textfont=dict(color=TEXT_MUTED, size=11),
+    )
     fig2.update_layout(**chart_layout_2d(height=340))
-    fig2.update_layout(coloraxis_showscale=False)
     st.plotly_chart(fig2, use_container_width=True)
 
 # ==========================================================================
 # TRANSACTION VOLUME TREND
 # ==========================================================================
-section_title("Transaction Volume Trend (last 90 days)")
+window_label = section_toolbar(
+    "Transaction Volume Trend",
+    lambda: st.radio(
+        "Window", ["30D", "90D", "180D", "1Y"],
+        index=1, horizontal=True, label_visibility="collapsed",
+        key="txn_window_toggle",
+    ),
+)
+window_days = {"30D": 30, "90D": 90, "180D": 180, "1Y": 365}[window_label]
+
 recent = transactions[
-    transactions["txn_date"] >= transactions["txn_date"].max() - pd.Timedelta(days=90)
+    transactions["txn_date"] >= transactions["txn_date"].max() - pd.Timedelta(days=window_days)
 ].copy()
 daily = (
     recent.groupby([recent["txn_date"].dt.date, "direction"])["amount"]
@@ -139,6 +179,7 @@ for trace in fig3.data:
         trace.update(fillcolor="rgba(74,110,126,0.22)")
 fig3.update_layout(**chart_layout_2d(height=320))
 st.plotly_chart(fig3, use_container_width=True)
+st.caption(f"Showing the trailing {window_label.lower()} of transaction activity.")
 
 # ==========================================================================
 # CUSTOMER LIFECYCLE WATERFALL
@@ -271,8 +312,21 @@ g3.plotly_chart(_gauge(pct_closed, "% Cases Closed", target=60, color=TEAL_LIGHT
 # ==========================================================================
 # CASE LOAD BY ANALYST
 # ==========================================================================
-section_title("Case Load by Analyst")
-load_by_analyst = cases.groupby("assigned_analyst").size().sort_values(ascending=False)
+sort_mode = section_toolbar(
+    "Case Load by Analyst",
+    lambda: st.radio(
+        "Sort", ["By Case Count", "By Analyst Name"],
+        index=0, horizontal=True, label_visibility="collapsed",
+        key="case_load_sort_toggle",
+    ),
+)
+
+load_by_analyst = cases.groupby("assigned_analyst").size()
+if sort_mode == "By Analyst Name":
+    load_by_analyst = load_by_analyst.sort_index()
+else:
+    load_by_analyst = load_by_analyst.sort_values(ascending=False)
+
 fig4 = px.bar(
     x=load_by_analyst.index,
     y=load_by_analyst.values,
@@ -280,7 +334,7 @@ fig4 = px.bar(
     text=load_by_analyst.values,
 )
 fig4.update_traces(
-    marker=dict(color=TEAL_DARK, line=dict(width=0.5, color=CARD_BORDER)),
+    marker=dict(color=teal_gradient(load_by_analyst.values), line=dict(width=0.5, color=CARD_BORDER)),
     textposition="outside",
     textfont=dict(color=TEXT_MUTED, size=11),
 )
