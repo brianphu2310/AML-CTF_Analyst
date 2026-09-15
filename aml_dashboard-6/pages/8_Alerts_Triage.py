@@ -2,153 +2,122 @@ import streamlit as st
 import pandas as pd
 
 from db_utils import load_all
-from theme import inject_css, page_header, section_title, risk_pill, bar3d_chart, teal_gradient
-from workflow_utils import init_state, log_audit, ALERT_DISPOSITIONS, CASE_STATUSES
+from theme import inject_css, page_header, section_title, risk_pill, grouped_bar3d_chart
+from workflow_utils import init_state, log_audit, review_due_date
 
-st.set_page_config(page_title="Alerts & Triage | AML Suite", layout="wide")
+st.set_page_config(page_title="Periodic Review | AML Suite", layout="wide")
 inject_css()
 page_header(
-    "Alert Generation & Triage",
-    "Unified queue of watchlist-screening hits and transaction-monitoring detections awaiting analyst disposition.",
-    "ALERTS",
+    "Periodic Review & Remediation",
+    "Risk-based scheduled re-verification of KYC, risk rating and screening - Low 24mo / Medium 12mo / "
+    "High 6mo / Critical 3mo.",
+    "PERIODIC REVIEW",
 )
 
 data = load_all()
-customers, transactions, cases = data["customers"], data["transactions"], data["cases"]
+customers = data["customers"]
+reviews_live = init_state("reviews_live", lambda: pd.DataFrame(columns=["customer_id", "last_review_date", "outcome"]))
 
-alerts = init_state("alerts_live", lambda: data["alerts"])
-cases_live = init_state("cases_live", lambda: data["cases"])
-
-# ---------------------------------------------------------------- FILTERS
-with st.sidebar:
-    st.subheader("Filters")
-    sources = st.multiselect("Source", sorted(alerts["source"].unique()))
-    severities = st.multiselect("Severity", ["Low", "Medium", "High", "Critical"])
-    dispositions = st.multiselect("Disposition", ALERT_DISPOSITIONS)
-
-df = alerts.copy()
-if sources:
-    df = df[df["source"].isin(sources)]
-if severities:
-    df = df[df["severity"].isin(severities)]
-if dispositions:
-    df = df[df["disposition"].isin(dispositions)]
-
-c1, c2, c3, c4 = st.columns(4)
-c1.metric("Total Alerts", f"{len(alerts):,}")
-c2.metric("New / Untriaged", int((alerts["disposition"] == "New").sum()))
-c3.metric("Requires Investigation", int((alerts["disposition"] == "Requires Investigation").sum()))
-c4.metric("Escalated to Case", int((alerts["disposition"] == "Escalated to Case").sum()))
-
-section_title("Alerts by Source and Disposition")
-st.caption("Drag to rotate, scroll to zoom, hover any bar for its exact count.")
-col1, col2 = st.columns(2)
-with col1:
-    src_counts = alerts["source"].value_counts()
-    src_color_map = {"Watchlist Screening": "#2C6E68", "Transaction Monitoring": "#9C7A24"}
-    fig = bar3d_chart(
-        categories=list(src_counts.index),
-        values=list(src_counts.values),
-        colors=[src_color_map.get(s, "#1F5E5B") for s in src_counts.index],
-        z_title="Alerts",
-        height=320,
-    )
-    st.plotly_chart(fig, use_container_width=True)
-with col2:
-    disp_counts = alerts["disposition"].value_counts().reindex(ALERT_DISPOSITIONS).fillna(0)
-    fig2 = bar3d_chart(
-        categories=list(disp_counts.index),
-        values=list(disp_counts.values),
-        colors=teal_gradient(disp_counts.values),
-        z_title="Alerts",
-        height=320,
-    )
-    st.plotly_chart(fig2, use_container_width=True)
-
-section_title(f"Alert Queue ({len(df):,} results)")
-disp_pill_map = {
-    "New": '<span class="pill pill-high">New</span>',
-    "False Positive": '<span class="pill pill-low">False Positive</span>',
-    "Requires Investigation": '<span class="pill pill-medium">Requires Investigation</span>',
-    "Escalated to Case": '<span class="pill pill-critical">Escalated to Case</span>',
-}
-show = df.sort_values(["disposition", "generated_date"], ascending=[True, False]).copy()
-show["Disposition"] = show["disposition"].map(disp_pill_map)
-show["Severity"] = show["severity"].apply(risk_pill)
-disp_df = show[["alert_id", "customer_id", "name", "source", "alert_type", "detail", "Severity",
-                 "Disposition", "generated_date"]]
-disp_df = disp_df.rename(columns={
-    "alert_id": "Alert ID", "customer_id": "Customer ID", "name": "Name", "source": "Source",
-    "alert_type": "Type", "detail": "Detail", "generated_date": "Generated",
-})
-disp_df["Generated"] = pd.to_datetime(disp_df["Generated"]).dt.strftime("%d %b %Y")
-st.write(disp_df.to_html(escape=False, index=False), unsafe_allow_html=True)
-
-st.divider()
-section_title("Triage an Alert")
-st.caption(
-    "Every AML alert must be reviewed by an analyst and dispositioned as a false positive, sent for "
-    "further investigation, or escalated to open a formal case."
+df = customers[customers["status"] == "Active"].copy()
+df["review_due"] = df.apply(lambda r: review_due_date(r["onboarding_date"], r["risk_level"]), axis=1)
+today = pd.Timestamp.today().normalize()
+df["days_until_due"] = (df["review_due"] - today).dt.days
+df["review_state"] = df["days_until_due"].apply(
+    lambda d: "Overdue" if d < 0 else "Due within 30 days" if d <= 30 else "Scheduled"
 )
 
-if df.empty:
-    st.warning("No alerts match the current filters.")
+completed_ids = set(reviews_live["customer_id"]) if not reviews_live.empty else set()
+
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Active Customers", f"{len(df):,}")
+c2.metric("Overdue for Review", int((df["review_state"] == "Overdue").sum()))
+c3.metric("Due within 30 Days", int((df["review_state"] == "Due within 30 days").sum()))
+c4.metric("Completed This Session", len(completed_ids))
+
+section_title("Review Schedule by Risk Level")
+st.caption("Drag to rotate, scroll to zoom, hover any bar for its exact count.")
+risk_order = ["Low", "Medium", "High", "Critical"]
+review_states = ["Overdue", "Due within 30 days", "Scheduled"]
+pivot = df.groupby(["risk_level", "review_state"]).size().unstack(fill_value=0)
+for state in review_states:
+    if state not in pivot.columns:
+        pivot[state] = 0
+pivot = pivot.reindex(risk_order).fillna(0)
+
+fig = grouped_bar3d_chart(
+    categories=risk_order,
+    series={state: pivot[state].tolist() for state in review_states},
+    colors={"Overdue": "#8B2E2E", "Due within 30 days": "#B5651D", "Scheduled": "#3F7A5D"},
+    z_title="Customers",
+    height=360,
+)
+st.plotly_chart(fig, use_container_width=True)
+
+with st.sidebar:
+    st.subheader("Filters")
+    state_filter = st.multiselect("Review state", ["Overdue", "Due within 30 days", "Scheduled"])
+    level_filter = st.multiselect("Risk level", ["Low", "Medium", "High", "Critical"])
+
+show = df.copy()
+if state_filter:
+    show = show[show["review_state"].isin(state_filter)]
+if level_filter:
+    show = show[show["risk_level"].isin(level_filter)]
+
+section_title(f"Review Register ({len(show):,} results)")
+show = show.sort_values("days_until_due").copy()
+state_pill = {
+    "Overdue": '<span class="pill pill-critical">Overdue</span>',
+    "Due within 30 days": '<span class="pill pill-high">Due within 30 days</span>',
+    "Scheduled": '<span class="pill pill-low">Scheduled</span>',
+}
+show["State"] = show["review_state"].map(state_pill)
+show["Risk"] = show["risk_level"].apply(risk_pill)
+disp = show[["customer_id", "name", "Risk", "review_due", "State"]].rename(columns={
+    "customer_id": "ID", "name": "Name", "review_due": "Review Due",
+})
+disp["Review Due"] = pd.to_datetime(disp["Review Due"]).dt.strftime("%d %b %Y")
+st.write(disp.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+st.divider()
+section_title("Complete a Periodic Review")
+st.caption(
+    "Remediate the customer file: reconfirm identity documents are current, re-run PEP/sanctions/adverse "
+    "media screening, and reassess the risk rating against current activity."
+)
+
+if show.empty:
+    st.info("No customers match the current filters.")
 else:
-    labels = {f"{r.alert_id} - {r.name} ({r.alert_type})": r.alert_id for r in df.itertuples()}
-    chosen = st.selectbox("Select an alert", list(labels.keys()))
-    alert_id = labels[chosen]
-    alert_row = alerts[alerts["alert_id"] == alert_id].iloc[0]
+    options = {f"{r.customer_id} - {r.name} ({r.review_state})": r.customer_id for r in show.itertuples()}
+    choice = st.selectbox("Select a customer", list(options.keys()))
+    cid = options[choice]
+    cust = customers[customers["customer_id"] == cid].iloc[0]
 
-    colA, colB = st.columns([1.3, 1])
-    with colA:
-        st.markdown(
-            f"**Customer:** {alert_row['name']} ({alert_row['customer_id']})  \n"
-            f"**Source:** {alert_row['source']}  \n"
-            f"**Type:** {alert_row['alert_type']}  \n"
-            f"**Severity:** {alert_row['severity']}  \n"
-            f"**Detail:** {alert_row['detail']}"
-        )
-        note = st.text_area("Analyst note (optional)", placeholder="Rationale for this disposition...")
+    st.markdown(
+        f"**Current risk rating:** {cust['risk_level']} ({cust['risk_score']}/100)  \n"
+        f"**Industry / country:** {cust['industry']} / {cust['country']}"
+    )
+    remediation = st.multiselect(
+        "Remediation checklist completed",
+        ["Identity documents reconfirmed / re-verified", "Re-screened for PEP / Sanctions / Adverse Media",
+         "Source of funds/wealth reconfirmed", "Beneficial ownership reconfirmed (business customers)",
+         "Risk rating reassessed against current activity"],
+    )
+    outcome = st.radio("Review outcome", ["No change to risk rating", "Risk rating increased",
+                                           "Risk rating decreased", "Refer for EDD / escalation"], horizontal=True)
+    notes = st.text_area("Review notes")
+    complete = st.button("Mark Review Complete", type="primary")
 
-    with colB:
-        new_disposition = st.radio("Set disposition", ALERT_DISPOSITIONS[1:], horizontal=False)
-        apply_btn = st.button("Apply Disposition", type="primary", use_container_width=True)
-
-    if apply_btn:
-        idx = st.session_state["alerts_live"].index[
-            st.session_state["alerts_live"]["alert_id"] == alert_id
-        ]
-        st.session_state["alerts_live"].loc[idx, "disposition"] = new_disposition
+    if complete:
+        new_row = pd.DataFrame([{
+            "customer_id": cid, "last_review_date": pd.Timestamp.today().normalize(), "outcome": outcome,
+        }])
+        st.session_state["reviews_live"] = pd.concat([reviews_live, new_row], ignore_index=True)
         log_audit(
-            action=f"Alert Triaged: {new_disposition}",
-            entity_type="Alert", entity_id=alert_id,
-            detail=f"{alert_row['source']} alert on {alert_row['customer_id']} set to '{new_disposition}'."
-                   + (f" Note: {note}" if note else ""),
+            "Periodic Review Completed", "Customer", cid,
+            f"Outcome: {outcome}. Checklist: {', '.join(remediation) if remediation else 'none recorded'}. "
+            + (f"Notes: {notes}" if notes else ""),
         )
-
-        if new_disposition == "Escalated to Case":
-            existing = st.session_state["cases_live"]
-            if not (existing["customer_id"] == alert_row["customer_id"]).any() or True:
-                new_case_id = f"CASE{len(existing) + 1:04d}"
-                new_row = {
-                    "case_id": new_case_id, "customer_id": alert_row["customer_id"],
-                    "opened_date": pd.Timestamp.today().normalize(),
-                    "priority": "Critical" if alert_row["severity"] == "Critical" else "High",
-                    "status": "Open", "assigned_analyst": "Unassigned", "typology": alert_row["alert_type"],
-                    "escalated_to": "", "sof_review_notes": "", "senior_decision": "",
-                    "smr_reference": "", "smr_submitted_date": pd.NaT,
-                    "next_review_date": pd.Timestamp.today().normalize() + pd.DateOffset(months=6),
-                }
-                st.session_state["cases_live"] = pd.concat(
-                    [existing, pd.DataFrame([new_row])], ignore_index=True
-                )
-                log_audit(
-                    action="Case Opened", entity_type="Case", entity_id=new_case_id,
-                    detail=f"Case opened from alert {alert_id} for {alert_row['customer_id']} "
-                           f"({alert_row['alert_type']}).",
-                )
-                st.success(f"Alert escalated - new case **{new_case_id}** opened. "
-                           "Continue the investigation on the Case Management & SMR page.")
-        else:
-            st.success(f"Alert {alert_id} set to '{new_disposition}'.")
+        st.success(f"Periodic review recorded for {cust['name']}.")
         st.rerun()
