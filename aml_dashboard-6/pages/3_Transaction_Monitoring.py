@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from db_utils import load_all
 from report_utils import detect_structuring, detect_rapid_movement, detect_high_risk_wires, HIGH_RISK_COUNTRIES_DEFAULT
-from theme import inject_css, page_header, section_title
+from theme import inject_css, page_header, section_title, bar3d_chart, scatter3d_chart, brown_gradient
 
-st.set_page_config(page_title="Transaction Monitoring | AML Suite", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Transaction Monitoring | AML Suite", layout="wide")
 inject_css()
 page_header("Transaction Monitoring", "Automated typology detection across the full transaction ledger.", "MONITORING")
 
@@ -14,7 +13,7 @@ data = load_all()
 customers, transactions = data["customers"], data["transactions"]
 
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["🧩 Structuring", "⚡ Rapid Movement", "🌐 High-Risk Wires", "🔎 Customer Drill-down"]
+    ["Structuring", "Rapid Movement", "High-Risk Wires", "Customer Drill-down"]
 )
 
 # ---------------------------------------------------------------- STRUCTURING
@@ -76,10 +75,14 @@ with tab3:
             & (transactions["counterparty_country"].isin(HIGH_RISK_COUNTRIES_DEFAULT))
         ]
         vol = wires.groupby("counterparty_country")["amount"].sum().sort_values(ascending=False)
-        fig = px.bar(x=vol.index, y=vol.values, labels={"x": "Country", "y": "Total AUD"})
-        fig.update_traces(marker_color="#B5541F")
-        fig.update_layout(template="plotly_white", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                           margin=dict(t=10, b=10, l=10, r=10), height=300)
+        fig = bar3d_chart(
+            categories=list(vol.index),
+            values=list(vol.values),
+            colors=brown_gradient(vol.values),
+            value_fmt=lambda v: f"${v:,.0f}",
+            z_title="Total AUD",
+            height=340,
+        )
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.success("No high-risk corridor wire activity detected in the current dataset.")
@@ -100,13 +103,24 @@ with tab4:
     c3.metric("Total Outbound", f"${cust_txns[cust_txns.direction=='Outbound']['amount'].sum():,.0f}")
     c4.metric("Risk Score", f"{cust['risk_score']}/100")
 
-    fig = px.scatter(
-        cust_txns, x="txn_date", y="amount", color="direction", size="amount",
-        color_discrete_map={"Inbound": "#1E3A5F", "Outbound": "#2A4E73"},
-        hover_data=["channel", "counterparty_country"],
+    st.caption("Drag to rotate, scroll to zoom. Depth (z) separates transactions by channel.")
+    channels = sorted(cust_txns["channel"].unique())
+    channel_index = {c: i for i, c in enumerate(channels)}
+    max_amount = cust_txns["amount"].max() if len(cust_txns) else 1
+    fig = scatter3d_chart(
+        x=cust_txns["txn_date"].tolist(),
+        y=cust_txns["amount"].tolist(),
+        z=[channel_index[c] for c in cust_txns["channel"]],
+        color_labels=cust_txns["direction"].tolist(),
+        color_map={"Inbound": "#1F5E5B", "Outbound": "#B5651D"},
+        size=[8 + 14 * (a / max_amount) for a in cust_txns["amount"]],
+        hover_text=[f"{d} - {ch} - {cty} - ${amt:,.0f}" for d, ch, cty, amt in
+                    zip(cust_txns["txn_date"].dt.strftime("%d %b %Y"), cust_txns["channel"],
+                        cust_txns["counterparty_country"], cust_txns["amount"])],
+        x_title="Date", y_title="Amount (AUD)", z_title="Channel",
+        height=380,
     )
-    fig.update_layout(template="plotly_white", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                       margin=dict(t=10, b=10, l=10, r=10), height=340, legend_title_text="")
+    fig.update_layout(scene=dict(zaxis=dict(tickvals=list(range(len(channels))), ticktext=channels)))
     st.plotly_chart(fig, use_container_width=True)
 
     st.dataframe(
