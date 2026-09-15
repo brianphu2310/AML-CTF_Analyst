@@ -9,6 +9,12 @@ accent palette, fully transparent charts. No decorative icons.
 This version includes backwards-compatibility aliases (NAVY, BRASS, INK,
 MUTED, PAPER, PANEL, BORDER) so older pages that still reference the
 previous palette keep working without edits.
+
+v2: adds polished, elevated "card" shadows around every Plotly chart
+(applies globally via CSS, no per-chart code changes needed), a
+teal-gradient helper for color-harmonious sequential bar charts, and a
+segmented-toolbar look for interactive controls placed at the top of
+each section.
 """
 
 import textwrap
@@ -20,6 +26,11 @@ BG_GRADIENT_2 = "#F6F8FA"
 CARD_BG       = "#FFFFFF"
 CARD_BORDER   = "#D6DDE3"
 CARD_SHADOW   = "0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04)"
+
+# Stronger, layered shadow reserved for chart cards -> gives them a
+# slightly "lifted" 3D presence relative to flat KPI cards.
+CHART_SHADOW       = "0 10px 26px rgba(15, 23, 42, 0.10), 0 3px 8px rgba(15, 23, 42, 0.06)"
+CHART_SHADOW_HOVER = "0 16px 34px rgba(15, 23, 42, 0.15), 0 6px 14px rgba(15, 23, 42, 0.08)"
 
 TEAL_DARK     = "#3D5F6E"
 TEAL_MID      = "#4A6E7E"
@@ -59,9 +70,6 @@ MAP_OPACITY   = "0.35"
 
 # --------------------------------------------------------------------------
 # BACKWARDS-COMPAT ALIASES
-# Older pages (e.g. 11_Process_Map.py, 6_Business_KYC.py) still reference
-# the previous palette names. Map them onto the new teal palette so those
-# files keep working without any edits.
 # --------------------------------------------------------------------------
 NAVY      = TEAL_DARK
 NAVY_DARK = TEAL_DARK
@@ -192,6 +200,11 @@ h1, h2, h3 {{
     border-top: 3px solid {TEAL_DARK};
     box-shadow: {CARD_SHADOW};
     padding: 1rem 1.2rem; height: 100%;
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
+}}
+.kpi-card:hover {{
+    box-shadow: {CHART_SHADOW};
+    transform: translateY(-2px);
 }}
 .kpi-label {{
     color: {TEXT_MUTED};
@@ -216,6 +229,46 @@ h1, h2, h3 {{
     margin: 1.8rem 0 0.7rem 0;
     padding-bottom: 0.45rem;
     border-bottom: 2px solid {TEAL_LIGHT};
+}}
+/* -------------------------------------------------------------------
+   SECTION TOOLBAR ROW
+   A section title paired with an interactive control, control pinned
+   top-right so it reads as "belonging" to the section before any
+   chart appears beneath it.
+------------------------------------------------------------------- */
+.section-toolbar {{
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 1rem;
+    margin: 1.8rem 0 0.7rem 0;
+    padding-bottom: 0.45rem;
+    border-bottom: 2px solid {TEAL_LIGHT};
+}}
+.section-toolbar .section-title {{
+    margin: 0; padding: 0; border: none;
+}}
+/* -------------------------------------------------------------------
+   ELEVATED CHART CARDS
+   Every Plotly chart is wrapped by Streamlit in a
+   div[data-testid="stPlotlyChart"] — styling it directly gives every
+   chart on every page a consistent, polished "raised panel" look
+   with a soft 3D-style shadow, no per-chart code changes required.
+------------------------------------------------------------------- */
+div[data-testid="stPlotlyChart"] {{
+    background: {CARD_BG};
+    border: 1px solid {CARD_BORDER};
+    border-radius: 8px;
+    box-shadow: {CHART_SHADOW};
+    padding: 0.9rem 1rem 0.3rem 1rem;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}}
+div[data-testid="stPlotlyChart"]:hover {{
+    box-shadow: {CHART_SHADOW_HOVER};
+    transform: translateY(-3px);
+}}
+/* Indicator/gauge charts sit in their own columns and read better
+   slightly smaller + centered than full-width trend charts. */
+div[data-testid="stPlotlyChart"] .plotly {{
+    border-radius: 6px;
 }}
 .pill {{
     display: inline-block;
@@ -301,6 +354,43 @@ table tbody tr:hover {{ background: {TEAL_SOFT}; }}
     background: {TEAL_MID}; border-color: {TEAL_MID};
     color: #FFFFFF;
 }}
+/* -------------------------------------------------------------------
+   SEGMENTED TOOLBAR CONTROLS
+   Horizontal st.radio widgets styled as pill/segmented toggles so
+   the per-section interactive controls read as toolbar chrome
+   sitting above the chart, not as a stray form field.
+------------------------------------------------------------------- */
+div[data-testid="stRadio"] > div {{
+    gap: 0.3rem;
+    background: {TEAL_SOFT};
+    border: 1px solid {TEAL_PALE};
+    border-radius: 20px;
+    padding: 0.2rem;
+    display: inline-flex;
+}}
+div[data-testid="stRadio"] label {{
+    background: transparent;
+    border-radius: 16px;
+    padding: 0.2rem 0.75rem !important;
+    margin: 0 !important;
+    font-size: 0.76rem !important;
+    color: {TEAL_DARK};
+    transition: all 0.15s ease;
+}}
+div[data-testid="stRadio"] label:hover {{
+    background: rgba(255,255,255,0.6);
+}}
+div[data-testid="stRadio"] input:checked + div {{
+    color: #FFFFFF;
+}}
+div[data-testid="stRadio"] label[data-checked="true"],
+div[data-testid="stRadio"] label:has(input:checked) {{
+    background: {TEAL_DARK};
+    box-shadow: 0 2px 6px rgba(61,95,110,0.35);
+}}
+div[data-testid="stRadio"] label:has(input:checked) p {{
+    color: #FFFFFF !important; font-weight: 600;
+}}
 section[data-testid="stSidebar"] {{
     background: {CARD_BG};
     border-right: 1px solid {CARD_BORDER};
@@ -346,6 +436,8 @@ def inject_css():
         CARD_BG=CARD_BG,
         CARD_BORDER=CARD_BORDER,
         CARD_SHADOW=CARD_SHADOW,
+        CHART_SHADOW=CHART_SHADOW,
+        CHART_SHADOW_HOVER=CHART_SHADOW_HOVER,
         TEAL_DARK=TEAL_DARK,
         TEAL_MID=TEAL_MID,
         TEAL_LIGHT=TEAL_LIGHT,
@@ -398,6 +490,38 @@ def section_title(text: str):
     st.markdown(f'<div class="section-title">{text}</div>', unsafe_allow_html=True)
 
 
+def section_toolbar(title: str, control_fn=None):
+    """
+    Render a section title with an interactive control anchored at the
+    top of the section, above any chart or table beneath it.
+
+    `control_fn` is a zero-arg callable that renders a Streamlit widget
+    (e.g. a lambda calling st.radio(...)) and returns its value. The
+    control is rendered inside a right-aligned column on the same row
+    as the title, so it visually reads as the section's toolbar.
+
+    Usage:
+        value = section_toolbar(
+            "Transaction Volume Trend",
+            lambda: st.radio("Window", ["30D", "90D", "180D"],
+                              index=1, horizontal=True,
+                              label_visibility="collapsed"),
+        )
+    """
+    title_col, control_col = st.columns([2.4, 1])
+    with title_col:
+        st.markdown(
+            f'<div class="section-title" style="margin-top:1.8rem;">{title}</div>',
+            unsafe_allow_html=True,
+        )
+    result = None
+    if control_fn is not None:
+        with control_col:
+            st.markdown('<div style="margin-top:2.05rem;"></div>', unsafe_allow_html=True)
+            result = control_fn()
+    return result
+
+
 # --------------------------------------------------------------------------
 # CHART STYLE HELPERS
 # --------------------------------------------------------------------------
@@ -429,6 +553,11 @@ def chart_layout_2d(height: int = 340, title: str = "") -> dict:
             bgcolor="rgba(255,255,255,0.75)",
             bordercolor=CARD_BORDER,
             borderwidth=1,
+        ),
+        hoverlabel=dict(
+            bgcolor=CARD_BG,
+            bordercolor=CARD_BORDER,
+            font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=12),
         ),
     )
     if title:
@@ -512,4 +641,45 @@ def apply_shadow(fig, marker=True, bar=True):
             marker=dict(line=dict(width=0.5, color="white")),
             selector=dict(type="scatter"),
         )
-    return fig                                                          
+    return fig
+
+
+# --------------------------------------------------------------------------
+# COLOR HARMONY HELPERS
+# --------------------------------------------------------------------------
+def _hex_to_rgb(h: str):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _rgb_to_hex(rgb) -> str:
+    return "#%02X%02X%02X" % tuple(max(0, min(255, round(c))) for c in rgb)
+
+
+def interpolate_color(c1: str, c2: str, t: float) -> str:
+    """Linear-interpolate between two hex colors at t in [0, 1]."""
+    t = max(0.0, min(1.0, t))
+    r1, g1, b1 = _hex_to_rgb(c1)
+    r2, g2, b2 = _hex_to_rgb(c2)
+    return _rgb_to_hex((r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t))
+
+
+def teal_gradient(values, dark: str = TEAL_DARK, light: str = TEAL_PALE):
+    """
+    Map a numeric sequence onto a single-hue teal ramp (light -> dark as
+    the value rises), so bar/line charts that don't carry semantic risk
+    meaning still read as part of the same color family as the rest of
+    the dashboard, while the shading itself reinforces value magnitude.
+    """
+    values = list(values)
+    if not values:
+        return []
+    vmin, vmax = min(values), max(values)
+    span = (vmax - vmin) or 1
+    return [interpolate_color(light, dark, (v - vmin) / span) for v in values]
+
+
+def teal_gradient_reversed(values, dark: str = TEAL_DARK, light: str = TEAL_PALE):
+    """Same as teal_gradient but darkest at the low end (for "smaller is
+    better" metrics where you still want visual weight on the largest bar)."""
+    return list(reversed(teal_gradient(list(reversed(list(values))), dark, light)))                                              
