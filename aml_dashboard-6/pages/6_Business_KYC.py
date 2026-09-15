@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from db_utils import load_all
-from theme import inject_css, page_header, section_title, risk_pill
+from theme import inject_css, page_header, section_title, risk_pill, grouped_bar3d_chart, RISK_COLOR_MAP
 
-st.set_page_config(page_title="Business KYC | AML Suite", page_icon="🏢", layout="wide")
+st.set_page_config(page_title="Business KYC | AML Suite", layout="wide")
 inject_css()
 page_header("Business Customer KYC", "Corporate due diligence register and re-verification tracking.", "BUSINESS KYC")
 
@@ -37,15 +36,25 @@ c3.metric("Due for EDD Refresh", int(df["due_for_review"].sum()))
 c4.metric("Foreign Incorporated", int((df["incorporation_country"] != "Australia").sum()))
 
 section_title("Risk Rating by Structure Type")
-pivot = df.groupby(["structure_type", "risk_rating"]).size().reset_index(name="count")
-fig = px.bar(
-    pivot, x="structure_type", y="count", color="risk_rating",
-    color_discrete_map={"Low": "#1F6F50", "Medium": "#8A6D1D", "High": "#B5541F", "Critical": "#7A1E1E"},
-    labels={"structure_type": "Structure", "count": "Entities"},
-)
-fig.update_layout(template="plotly_white", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                   margin=dict(t=10, b=10, l=10, r=10), height=340, legend_title_text="")
-st.plotly_chart(fig, use_container_width=True)
+st.caption("Drag to rotate, scroll to zoom, hover any bar for its exact count.")
+if df.empty:
+    st.info("No entities match the current filters.")
+else:
+    structures = sorted(df["structure_type"].unique())
+    pivot = df.groupby(["structure_type", "risk_rating"]).size().unstack(fill_value=0)
+    for lvl in ["Low", "Medium", "High", "Critical"]:
+        if lvl not in pivot.columns:
+            pivot[lvl] = 0
+    pivot = pivot.reindex(structures).fillna(0)
+
+    fig = grouped_bar3d_chart(
+        categories=structures,
+        series={lvl: pivot[lvl].tolist() for lvl in ["Low", "Medium", "High", "Critical"]},
+        colors=RISK_COLOR_MAP,
+        z_title="Entities",
+        height=380,
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 section_title("KYC Register")
 show = df.sort_values("risk_score", ascending=False).copy()
