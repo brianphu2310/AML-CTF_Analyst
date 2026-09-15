@@ -1,12 +1,10 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-import networkx as nx
 
 from db_utils import load_all
-from theme import inject_css, page_header, section_title, risk_pill
+from theme import inject_css, page_header, section_title, risk_pill, network3d_chart, TEAL_DARK, TEAL_MID, BROWN_MID, HIGH
 
-st.set_page_config(page_title="UBO Network | AML Suite", page_icon="🕸️", layout="wide")
+st.set_page_config(page_title="UBO Network | AML Suite", layout="wide")
 inject_css()
 page_header("Ultimate Beneficial Ownership Network", "Ownership structure mapping and PEP exposure across entities.", "UBO")
 
@@ -56,57 +54,39 @@ else:
     owners = ubo[ubo["business_id"] == bid]
     biz_row = businesses[businesses["business_id"] == bid].iloc[0]
 
-    G = nx.Graph()
-    G.add_node(bid, label=biz_row["legal_name"], kind="business")
-    for _, o in owners.iterrows():
-        node_id = f"{o['ubo_id']}"
-        G.add_node(node_id, label=o["owner_name"], kind="pep" if o["is_pep"] else o["owner_type"].lower())
-        G.add_edge(bid, node_id, weight=o["ownership_pct"])
-
-    pos = nx.spring_layout(G, seed=42, k=0.9)
-
-    edge_x, edge_y = [], []
-    for u, v in G.edges():
-        x0, y0 = pos[u]
-        x1, y1 = pos[v]
-        edge_x += [x0, x1, None]
-        edge_y += [y0, y1, None]
-    edge_trace = go.Scatter(x=edge_x, y=edge_y, line=dict(width=1.3, color="#C7CDD6"), mode="lines", hoverinfo="none")
-
-    color_map = {"business": "#1E3A5F", "individual": "#2A4E73", "corporate": "#8A6D1D", "pep": "#B5541F"}
-    node_x, node_y, node_text, node_color, node_size = [], [], [], [], []
-    for n, attrs in G.nodes(data=True):
-        x, y = pos[n]
-        node_x.append(x)
-        node_y.append(y)
-        node_text.append(attrs["label"])
-        node_color.append(color_map.get(attrs["kind"], "#5B6472"))
-        node_size.append(34 if attrs["kind"] == "business" else 24)
-
-    node_trace = go.Scatter(
-        x=node_x, y=node_y, mode="markers+text", text=node_text, textposition="bottom center",
-        textfont=dict(size=11, color="#1F2937", family="Inter, sans-serif"),
-        marker=dict(size=node_size, color=node_color, line=dict(width=1.5, color="#FFFFFF")),
-        hoverinfo="text",
-    )
-
-    fig = go.Figure(data=[edge_trace, node_trace])
-    fig.update_layout(
-        showlegend=False, template="plotly_white", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=10, b=10, l=10, r=10), height=460,
-        xaxis=dict(visible=False), yaxis=dict(visible=False),
+    st.caption("Drag to rotate, scroll to zoom. Height reflects ownership percentage.")
+    color_map = {"business": TEAL_DARK, "individual": TEAL_MID, "corporate": BROWN_MID, "pep": HIGH}
+    owner_nodes = [
+        {
+            "label": o["owner_name"],
+            "kind": "pep" if o["is_pep"] else o["owner_type"].lower(),
+            "weight": o["ownership_pct"],
+        }
+        for _, o in owners.iterrows()
+    ]
+    fig = network3d_chart(
+        center_label=biz_row["legal_name"], center_kind="business",
+        nodes=owner_nodes, color_map=color_map, height=460,
     )
     st.plotly_chart(fig, use_container_width=True)
 
     legend_cols = st.columns(4)
-    legend_cols[0].markdown("🟢 Reporting entity")
-    legend_cols[1].markdown("🔵 Individual owner")
-    legend_cols[2].markdown("🟡 Corporate owner")
-    legend_cols[3].markdown("🔴 PEP-linked owner")
+    legend_items = [
+        (color_map["business"], "Reporting entity"),
+        (color_map["individual"], "Individual owner"),
+        (color_map["corporate"], "Corporate owner"),
+        (color_map["pep"], "PEP-linked owner"),
+    ]
+    for col, (color, label) in zip(legend_cols, legend_items):
+        col.markdown(
+            f'<span style="display:inline-block;width:10px;height:10px;border-radius:2px;'
+            f'background:{color};margin-right:6px;"></span>{label}',
+            unsafe_allow_html=True,
+        )
 
     section_title("Ownership Detail")
     owner_disp = owners[["ubo_id", "owner_name", "owner_type", "ownership_pct", "is_pep", "nationality"]].copy()
-    owner_disp["is_pep"] = owner_disp["is_pep"].map({True: "⚠️ Yes", False: "No"})
+    owner_disp["is_pep"] = owner_disp["is_pep"].map({True: "Yes", False: "No"})
     owner_disp = owner_disp.rename(columns={
         "ubo_id": "UBO ID", "owner_name": "Owner", "owner_type": "Type",
         "ownership_pct": "Ownership %", "is_pep": "PEP", "nationality": "Nationality",
@@ -116,6 +96,5 @@ else:
     if owners["is_pep"].any():
         st.error(
             "One or more beneficial owners of this entity are flagged as a Politically Exposed Person. "
-            "Enhanced Due Diligence (EDD) and senior management sign-off are required.",
-            icon="🚨",
+            "Enhanced Due Diligence (EDD) and senior management sign-off are required."
         )
