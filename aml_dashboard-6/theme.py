@@ -25,6 +25,7 @@ keep working without edits.
 
 import textwrap
 import streamlit as st
+import plotly.graph_objects as go
 
 # ---------------------------------------------------------------- PALETTE
 # Warm cream backdrop, layered so the teal/brown wash has room to breathe.
@@ -75,7 +76,8 @@ MEDIUM        = "#A9822B"
 LOW           = "#3F7D5C"
 INFO          = "#2E8B8B"
 
-CHART_GRID    = "rgba(139, 94, 60, 0.14)"
+CHART_GRID    = "rgba(90, 62, 38, 0.32)"
+CHART_GRID_MINOR = "rgba(90, 62, 38, 0.15)"
 CHART_SEQ     = ["#1F6F6F", "#6B4A32", "#2E8B8B", "#9C7B5C", "#3F7D5C", "#C1702E",
                  "#A9822B", "#B0413E", "#6FB8B8", "#4A3222"]
 
@@ -630,9 +632,16 @@ def chart_layout_2d(height: int = 340, title: str = "") -> dict:
         transition=dict(duration=450, easing="cubic-in-out"),
         uniformtext=dict(minsize=9, mode="hide"),
         xaxis=dict(
+            showgrid=True,
             gridcolor=CHART_GRID,
+            gridwidth=1,
+            griddash="dot",
+            zeroline=True,
             zerolinecolor=CHART_GRID,
+            zerolinewidth=1.4,
+            showline=True,
             linecolor=CARD_BORDER,
+            linewidth=1.2,
             tickfont=dict(color=TEXT_MUTED, size=11),
             title_font=dict(color=TEXT_MUTED, size=11),
             showspikes=True,
@@ -642,9 +651,16 @@ def chart_layout_2d(height: int = 340, title: str = "") -> dict:
             spikemode="across",
         ),
         yaxis=dict(
+            showgrid=True,
             gridcolor=CHART_GRID,
+            gridwidth=1,
+            griddash="dot",
+            zeroline=True,
             zerolinecolor=CHART_GRID,
+            zerolinewidth=1.4,
+            showline=True,
             linecolor=CARD_BORDER,
+            linewidth=1.2,
             tickfont=dict(color=TEXT_MUTED, size=11),
             title_font=dict(color=TEXT_MUTED, size=11),
         ),
@@ -766,9 +782,8 @@ def enable_rich_interaction(fig, hover_glow: bool = True):
 
 
 PLOTLY_CONFIG = {
-    "displayModeBar": True,
+    "displayModeBar": False,
     "displaylogo": False,
-    "modeBarButtonsToRemove": ["lasso2d", "select2d"],
     "scrollZoom": True,
 }
 
@@ -892,4 +907,97 @@ def brown_gradient(values, dark: str = BROWN_DARK, light: str = BROWN_PALE):
         return []
     vmin, vmax = min(values), max(values)
     span = (vmax - vmin) or 1
-    return [interpolate_color(light, dark, (v - vmin) / span) for v in values]                                      
+    return [interpolate_color(light, dark, (v - vmin) / span) for v in values]
+
+
+# --------------------------------------------------------------------------
+# POLISHED / EXTRUDED 3D BAR TREATMENT
+# A single flat fill + a thin lid strip reads as a "simple webapp" bar.
+# This builds a genuinely dimensional block per bar: a smooth per-bar
+# vertical (or horizontal) gradient body derived from that bar's own hue
+# (so semantic colors like risk levels survive), a shadowed trailing
+# edge standing in for the side face of the box, and a bright bevel lid
+# at the tip under a top-down light source.
+# --------------------------------------------------------------------------
+def _shade_from_base(base_color: str, dark_t: float = 0.38, light_t: float = 0.58):
+    """Derive a (dark, light) pair from a single base hue for 3D shading."""
+    dark = interpolate_color(base_color, "#1A1006", dark_t)
+    light = interpolate_color(base_color, "#FFFFFF", light_t)
+    return dark, light
+
+
+def apply_polished_3d_bars(fig, categories, values, orientation: str = "v",
+                            base_colors=None, cap_color: str = "rgba(255,255,255,0.80)",
+                            n_segments: int = 16, width: float = 0.56):
+    """
+    Replace a flat px.bar fill with a premium extruded-box look:
+      - hides the original flat trace (kept only for hover/text)
+      - N stacked micro-segments per bar create a smooth dark-base ->
+        lit-tip gradient body, derived from that bar's own hue
+      - a translucent shadow strip along the trailing edge stands in
+        for the shadowed side face of the box
+      - a bright bevel lid sits at the tip (reuses apply_3d_bar_caps)
+
+    categories / values: the ORIGINAL arrays used to build the base
+    trace (same order). base_colors: a single hex color, or a list of
+    hex colors (one per bar, same order as `categories`) — pass the
+    semantic risk colors here to keep Low/Medium/High/Critical legible
+    while still getting the 3D treatment.
+    """
+    cats, vals = list(categories), list(values)
+    if not cats:
+        return fig
+    if base_colors is None:
+        base_colors = TEAL_DARK
+    if isinstance(base_colors, str):
+        base_colors = [base_colors] * len(cats)
+
+    # Original trace becomes invisible (hover/text/click target only).
+    fig.update_traces(marker=dict(color="rgba(0,0,0,0)", line=dict(width=0)),
+                       selector=dict(type="bar"))
+
+    shades = [_shade_from_base(bc) for bc in base_colors]
+
+    for i in range(n_segments):
+        t_lo, t_hi = i / n_segments, (i + 1) / n_segments
+        t_mid = (i + 0.5) / n_segments
+        seg_colors = [interpolate_color(d, l, t_mid) for d, l in shades]
+        seg_vals = [v * (t_hi - t_lo) for v in vals]
+        seg_base = [v * t_lo for v in vals]
+        if orientation == "v":
+            fig.add_trace(go.Bar(
+                x=cats, y=seg_vals, base=seg_base, width=width,
+                marker=dict(color=seg_colors, line=dict(width=0)),
+                hoverinfo="skip", showlegend=False, name=f"_seg{i}",
+            ))
+        else:
+            fig.add_trace(go.Bar(
+                y=cats, x=seg_vals, base=seg_base, orientation="h", width=width,
+                marker=dict(color=seg_colors, line=dict(width=0)),
+                hoverinfo="skip", showlegend=False, name=f"_seg{i}",
+            ))
+
+    # Shadowed trailing edge = the "side face" of the extruded box.
+    edge_colors = [d for d, _ in shades]
+    strip_w = width * 0.16
+    if orientation == "v":
+        fig.add_trace(go.Bar(
+            x=cats, y=vals, width=strip_w, offset=(width / 2 - strip_w),
+            marker=dict(color=edge_colors, opacity=0.55, line=dict(width=0)),
+            hoverinfo="skip", showlegend=False, name="_edge",
+        ))
+    else:
+        fig.add_trace(go.Bar(
+            y=cats, x=vals, orientation="h", width=strip_w,
+            offset=(width / 2 - strip_w),
+            marker=dict(color=edge_colors, opacity=0.55, line=dict(width=0)),
+            hoverinfo="skip", showlegend=False, name="_edge",
+        ))
+
+    fig.update_layout(barmode="overlay")
+
+    if orientation == "v":
+        fig = apply_3d_bar_caps(fig, cats, vals, orientation="v", cap_color=cap_color)
+    else:
+        fig = apply_3d_bar_caps(fig, vals, cats, orientation="h", cap_color=cap_color)
+    return fig                          
