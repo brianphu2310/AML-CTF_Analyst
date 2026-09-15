@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 from db_utils import load_all
-from theme import inject_css, page_header, section_title, risk_pill
+from theme import inject_css, page_header, section_title, risk_pill, bar3d_chart, teal_gradient
 from workflow_utils import init_state, log_audit, ALERT_DISPOSITIONS, CASE_STATUSES
 
-st.set_page_config(page_title="Alerts & Triage | AML Suite", page_icon="🚨", layout="wide")
+st.set_page_config(page_title="Alerts & Triage | AML Suite", layout="wide")
 inject_css()
 page_header(
     "Alert Generation & Triage",
@@ -42,21 +41,28 @@ c3.metric("Requires Investigation", int((alerts["disposition"] == "Requires Inve
 c4.metric("Escalated to Case", int((alerts["disposition"] == "Escalated to Case").sum()))
 
 section_title("Alerts by Source and Disposition")
+st.caption("Drag to rotate, scroll to zoom, hover any bar for its exact count.")
 col1, col2 = st.columns(2)
 with col1:
     src_counts = alerts["source"].value_counts()
-    fig = px.pie(names=src_counts.index, values=src_counts.values, hole=0.5,
-                 color=src_counts.index,
-                 color_discrete_map={"Watchlist Screening": "#2A4E73", "Transaction Monitoring": "#9C7A34"})
-    fig.update_layout(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)",
-                       margin=dict(t=10, b=10, l=10, r=10), height=300)
+    src_color_map = {"Watchlist Screening": "#2C6E68", "Transaction Monitoring": "#9C7A24"}
+    fig = bar3d_chart(
+        categories=list(src_counts.index),
+        values=list(src_counts.values),
+        colors=[src_color_map.get(s, "#1F5E5B") for s in src_counts.index],
+        z_title="Alerts",
+        height=320,
+    )
     st.plotly_chart(fig, use_container_width=True)
 with col2:
     disp_counts = alerts["disposition"].value_counts().reindex(ALERT_DISPOSITIONS).fillna(0)
-    fig2 = px.bar(x=disp_counts.index, y=disp_counts.values, labels={"x": "Disposition", "y": "Alerts"})
-    fig2.update_traces(marker_color="#1E3A5F")
-    fig2.update_layout(template="plotly_white", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                        margin=dict(t=10, b=10, l=10, r=10), height=300)
+    fig2 = bar3d_chart(
+        categories=list(disp_counts.index),
+        values=list(disp_counts.values),
+        colors=teal_gradient(disp_counts.values),
+        z_title="Alerts",
+        height=320,
+    )
     st.plotly_chart(fig2, use_container_width=True)
 
 section_title(f"Alert Queue ({len(df):,} results)")
