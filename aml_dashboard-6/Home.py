@@ -25,7 +25,7 @@ from theme import (
     inject_css, page_header, kpi_card, section_title, section_toolbar,
     chart_layout_2d, chart_layout_3d, chart_color_sequence,
     teal_gradient, brown_gradient, enable_rich_interaction,
-    apply_3d_bar_caps, apply_gradient_fill, PLOTLY_CONFIG,
+    apply_3d_bar_caps, apply_polished_3d_bars, apply_gradient_fill, PLOTLY_CONFIG,
     RISK_COLOR_MAP,
     TEAL_DARK, TEAL_MID, TEAL_LIGHT, TEAL_PALE, TEAL_SOFT,
     BROWN_DARK, BROWN_MID, BROWN_LIGHT, BROWN_PALE,
@@ -101,13 +101,15 @@ with col1:
     fig.update_traces(
         textposition="outside",
         textfont=dict(color=TEXT_MUTED, size=11),
-        marker=dict(line=dict(width=0.6, color="rgba(255,255,255,0.6)")),
         hovertemplate="<b>%{x}</b><br>%{y:,} customers<extra></extra>",
     )
     fig.update_layout(**chart_layout_2d(height=340))
     fig.update_layout(showlegend=False, hovermode="x")
-    # Genuine 3D "beveled box" look: a lighter lid on top of each bar.
-    fig = apply_3d_bar_caps(fig, risk_counts.index, risk_counts.values, orientation="v")
+    # Genuine extruded-box look, one hue per risk level (gradient body +
+    # shadowed side + bevel lid) so Low/Medium/High/Critical stay legible.
+    risk_colors = [RISK_COLOR_MAP[level] for level in risk_counts.index]
+    fig = apply_polished_3d_bars(fig, risk_counts.index, risk_counts.values,
+                                  orientation="v", base_colors=risk_colors)
     fig = enable_rich_interaction(fig)
     st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
@@ -129,7 +131,9 @@ with col2:
         x_label = "Avg Risk Score"
 
     # Harmonized teal ramp (pale -> deep accent with magnitude) so this
-    # non-semantic chart still reads as part of the same color family.
+    # non-semantic chart still reads as part of the same color family;
+    # each bar then gets its own dark/light 3D shading derived from that
+    # exact teal shade, so the magnitude ramp survives the extrusion.
     bar_colors = teal_gradient(industry_series.values)
 
     fig2 = px.bar(
@@ -139,7 +143,6 @@ with col2:
         labels={"x": x_label, "y": ""},
     )
     fig2.update_traces(
-        marker=dict(color=bar_colors, line=dict(width=0.6, color="rgba(255,255,255,0.6)")),
         text=[f"{v:,.0f}" if industry_metric == "Customer Count" else f"{v:.1f}"
               for v in industry_series.values],
         textposition="outside",
@@ -148,8 +151,9 @@ with col2:
     )
     fig2.update_layout(**chart_layout_2d(height=340))
     fig2.update_layout(hovermode="y")
-    # 3D cap at the tip of each horizontal bar.
-    fig2 = apply_3d_bar_caps(fig2, industry_series.values, industry_series.index, orientation="h")
+    # Extruded-box treatment: gradient body + shadowed edge + bevel lid.
+    fig2 = apply_polished_3d_bars(fig2, industry_series.index, industry_series.values,
+                                   orientation="h", base_colors=bar_colors)
     fig2 = enable_rich_interaction(fig2)
     st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
 
@@ -183,10 +187,22 @@ fig3 = px.area(
     labels={"txn_date": "Date", "amount": "Total Amount (AUD)"},
 )
 fig3.update_traces(
-    line=dict(width=2.2),
+    line=dict(width=2.6, shape="spline", smoothing=0.35),
     hovertemplate="%{x|%d %b %Y}<br>$%{y:,.0f}<extra></extra>",
 )
 fig3.update_layout(**chart_layout_2d(height=320))
+# Soft glow trace behind each line (a wider, low-opacity duplicate)
+# for a more dimensional, "lit" look instead of a flat single stroke.
+for trace_name, glow_color in (("Inbound", "rgba(31,111,111,0.35)"),
+                                ("Outbound", "rgba(107,74,50,0.30)")):
+    src = next((t for t in fig3.data if t.name == trace_name), None)
+    if src is not None:
+        fig3.add_trace(go.Scatter(
+            x=src.x, y=src.y, mode="lines",
+            line=dict(width=7, shape="spline", smoothing=0.35, color=glow_color),
+            hoverinfo="skip", showlegend=False, name=f"_glow_{trace_name}",
+        ))
+fig3.data = tuple(list(fig3.data[-2:]) + list(fig3.data[:-2]))  # glow behind lines
 # Genuine vertical gradient fills — deep teal fading to pale near the
 # baseline for Inbound, deep brown fading to cream for Outbound — instead
 # of one flat translucent color.
@@ -360,14 +376,14 @@ fig4 = px.bar(
     text=load_by_analyst.values,
 )
 fig4.update_traces(
-    marker=dict(color=brown_gradient(load_by_analyst.values), line=dict(width=0.6, color="rgba(255,255,255,0.6)")),
     textposition="outside",
     textfont=dict(color=TEXT_MUTED, size=11),
     hovertemplate="<b>%{x}</b><br>%{y:,} cases<extra></extra>",
 )
 fig4.update_layout(**chart_layout_2d(height=300))
 fig4.update_layout(hovermode="x")
-fig4 = apply_3d_bar_caps(fig4, load_by_analyst.index, load_by_analyst.values, orientation="v")
+fig4 = apply_polished_3d_bars(fig4, load_by_analyst.index, load_by_analyst.values,
+                               orientation="v", base_colors=brown_gradient(load_by_analyst.values))
 fig4 = enable_rich_interaction(fig4)
 st.plotly_chart(fig4, use_container_width=True, config=PLOTLY_CONFIG)
 
