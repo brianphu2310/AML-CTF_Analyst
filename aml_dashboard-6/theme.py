@@ -520,9 +520,16 @@ def section_toolbar(title: str, control_fn=None):
 
 
 # --------------------------------------------------------------------------
-# LEGACY 2D LAYOUT HELPER (kept only for plotly_layout_defaults callers)
+# SHARED 2D CHART LAYOUT
 # --------------------------------------------------------------------------
 def chart_layout_2d(height: int = 340, title: str = "") -> dict:
+    """
+    Base layout for every 2D chart in the suite: transparent background
+    (so the white chart card shows through), warm brown-tinted gridlines,
+    unified hover with dotted spike lines for a genuinely interactive
+    feel, and a smooth transition so re-sorted / re-filtered data
+    animates in rather than snapping.
+    """
     layout = dict(
         template="plotly_white",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -530,13 +537,18 @@ def chart_layout_2d(height: int = 340, title: str = "") -> dict:
         font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=12),
         margin=dict(t=40 if title else 10, b=10, l=10, r=10),
         height=height,
+        hovermode="x unified",
+        hoverdistance=40,
+        transition=dict(duration=400, easing="cubic-in-out"),
+        uniformtext=dict(minsize=9, mode="hide"),
         xaxis=dict(gridcolor=CHART_GRID, zerolinecolor=CHART_GRID, linecolor=CARD_BORDER,
-                   tickfont=dict(color=TEXT_MUTED, size=11), title_font=dict(color=TEXT_MUTED, size=11)),
+                   tickfont=dict(color=TEXT_MUTED, size=11), title_font=dict(color=TEXT_MUTED, size=11),
+                   showspikes=True, spikecolor=TEAL_MID, spikethickness=1, spikedash="dot", spikemode="across"),
         yaxis=dict(gridcolor=CHART_GRID, zerolinecolor=CHART_GRID, linecolor=CARD_BORDER,
                    tickfont=dict(color=TEXT_MUTED, size=11), title_font=dict(color=TEXT_MUTED, size=11)),
-        legend=dict(font=dict(color=TEXT_PRIMARY, size=11), bgcolor="rgba(255,255,255,0.8)",
+        legend=dict(font=dict(color=TEXT_PRIMARY, size=11), bgcolor="rgba(255,255,255,0.85)",
                     bordercolor=CARD_BORDER, borderwidth=1),
-        hoverlabel=dict(bgcolor=CARD_BG, bordercolor=CARD_BORDER,
+        hoverlabel=dict(bgcolor=CARD_BG, bordercolor=TEAL_MID,
                         font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=12)),
     )
     if title:
@@ -606,400 +618,277 @@ def brown_gradient(values, dark: str = BROWN_DARK, light: str = BROWN_LIGHT):
     return [interpolate_color(light, dark, (v - vmin) / span) for v in values]
 
 
-# ==========================================================================
-# 3D CHART ENGINE
-# Every chart in the suite is built from these primitives: extruded
-# Mesh3d "cuboid" bars with a soft contact shadow, a Surface ribbon for
-# trends, a connected 3D waterfall, a 3D scatter, and a 3D ownership
-# network. Every figure returned here is a real 3D scene - drag to
-# rotate, scroll to zoom, hover for values - with no additional
-# interaction code needed on the calling page.
-# ==========================================================================
-def _cuboid_trace(x0, x1, y0, y1, z0, z1, color, opacity=1.0, hover=None):
-    """A single extruded rectangular box, lit for a glossy 3D look."""
-    xs = [x0, x0, x1, x1, x0, x0, x1, x1]
-    ys = [y0, y1, y1, y0, y0, y1, y1, y0]
-    zs = [z0, z0, z0, z0, z1, z1, z1, z1]
-    i = [7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2]
-    j = [3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3]
-    k = [0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6]
-    return go.Mesh3d(
-        x=xs, y=ys, z=zs, i=i, j=j, k=k,
-        color=color, opacity=opacity, flatshading=True,
-        lighting=dict(ambient=0.55, diffuse=0.85, specular=0.5, roughness=0.4, fresnel=0.15),
-        lightposition=dict(x=150, y=250, z=350),
-        hoverinfo="text" if hover else "skip",
-        hovertext=hover,
-        showlegend=False,
+# --------------------------------------------------------------------------
+# INTERACTION HELPERS (shared "make it feel alive" settings)
+# --------------------------------------------------------------------------
+PLOTLY_CONFIG = {
+    "displayModeBar": False,
+    "displaylogo": False,
+    "scrollZoom": True,
+}
+
+
+def enable_rich_interaction(fig, hover_glow: bool = True):
+    """Legend click-to-isolate + slightly tuned marker opacity, layered on
+    top of the unified hover / spike lines already set by chart_layout_2d."""
+    fig.update_layout(
+        hoverlabel_align="left",
+        legend=dict(itemclick="toggleothers", itemdoubleclick="toggle"),
     )
+    if hover_glow:
+        fig.update_traces(marker=dict(opacity=0.94), selector=dict(type="bar"))
+    return fig
 
 
-def _flat_camera(x, y, z, projection: str = "orthographic"):
-    """
-    Shared camera builder for every 3D scene. Orthographic projection
-    removes the vanishing-point distortion of a perspective camera, so
-    bars/ribbons read as clean, gently-tilted diagrams rather than a
-    dramatic, gimmicky 3D render - while staying genuinely draggable
-    and zoomable. Eye vectors across the chart engine are tuned to be
-    flatter (more top-down, less oblique) than earlier versions.
-    """
-    return dict(eye=dict(x=x, y=y, z=z), projection=dict(type=projection))
-
-
-def _base_scene_layout(height, title=""):
-    layout = dict(
-        template="plotly_white",
-        paper_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=11),
-        margin=dict(t=40 if title else 8, b=8, l=8, r=8),
-        height=height,
-        scene=dict(
-            xaxis=dict(backgroundcolor="rgba(31,94,91,0.03)", gridcolor=CHART_GRID, zerolinecolor=CHART_GRID,
-                       showbackground=True, tickfont=dict(color=TEXT_MUTED, size=10), title_font=dict(color=TEXT_MUTED, size=11)),
-            yaxis=dict(backgroundcolor="rgba(31,94,91,0.03)", gridcolor=CHART_GRID, zerolinecolor=CHART_GRID,
-                       showbackground=True, tickfont=dict(color=TEXT_MUTED, size=10), title_font=dict(color=TEXT_MUTED, size=11)),
-            zaxis=dict(backgroundcolor="rgba(31,94,91,0.03)", gridcolor=CHART_GRID, zerolinecolor=CHART_GRID,
-                       showbackground=True, tickfont=dict(color=TEXT_MUTED, size=10), title_font=dict(color=TEXT_MUTED, size=11)),
-            camera=_flat_camera(1.35, 1.35, 1.55),
-            # Full-bleed domain so the scene fills its card edge-to-edge
-            # instead of floating off-center inside the plot area.
-            domain=dict(x=[0, 1], y=[0, 1]),
-        ),
-    )
-    if title:
-        layout["title"] = dict(text=title, font=dict(family="Source Serif 4, Georgia, serif", size=15, color=TEAL_DARK),
-                                x=0.01, xanchor="left", y=0.97)
-    return layout
-
-
+# ==========================================================================
+# 2D CHART ENGINE
+# Every chart in the suite is built from these primitives. They keep the
+# same function names and call signatures as the previous 3D (Mesh3d /
+# Surface) engine, so no page needs to change - only the rendering
+# underneath switched from extruded 3D geometry to clean, flat 2D traces.
+# Every chart still draws from the same harmonized teal / brown palette
+# (via teal_gradient / brown_gradient / RISK_COLOR_MAP / CHART_SEQ) so the
+# whole suite reads as one consistent, color-coordinated system, and every
+# chart keeps unified hover, spike lines, a smooth transition on
+# re-render, and legend click-to-isolate.
+# ==========================================================================
 def chart_layout_3d(height: int = 500, title: str = "") -> dict:
-    """Public alias kept for any page building a custom 3D figure."""
-    return _base_scene_layout(height, title)
+    """Compatibility alias - now just the shared 2D layout."""
+    return chart_layout_2d(height=height, title=title)
 
 
 def bar3d_chart(categories, values, colors=None, height=420, value_fmt=None,
                  bar_ratio=0.62, depth_ratio=0.5, camera=None, shadow=True, z_title=""):
     """
-    A 3D extruded bar chart (Mesh3d), rotatable and zoomable. Bars are
-    intentionally wide and shallow (high bar_ratio, low depth_ratio)
-    rather than chunky cubes, and the camera is a flat, orthographic
-    near-top-down view by default - genuine 3D geometry, without the
-    exaggerated, gimmicky tilt of a dramatic perspective render.
+    A single-series 2D bar chart. `bar_ratio`, `depth_ratio`, `camera` and
+    `shadow` are accepted for backwards compatibility with callers written
+    for the old 3D engine but no longer change the rendering; `bar_ratio`
+    still maps to Plotly's bargap so bar width stays adjustable.
     """
     categories = list(categories)
     values = [float(v) for v in values]
-    n = max(len(categories), 1)
     if colors is None:
         colors = teal_gradient(values)
     if isinstance(colors, str):
         colors = [colors] * len(values)
 
-    half_w, half_d = bar_ratio / 2, depth_ratio / 2
-    top_val = max(values) if values else 1.0
-    traces = []
-
-    for idx, (cat, val, col) in enumerate(zip(categories, values, colors)):
-        z1 = max(val, top_val * 0.006)
-        fmt_val = value_fmt(val) if value_fmt else f"{val:,.0f}"
-        if shadow:
-            traces.append(_cuboid_trace(
-                idx - half_w - 0.03, idx + half_w + 0.03,
-                -half_d - 0.03, half_d + 0.03, -top_val * 0.01, 0,
-                color="rgba(74,52,28,0.18)",
-            ))
-        traces.append(_cuboid_trace(
-            idx - half_w, idx + half_w, -half_d, half_d, 0, z1,
-            color=col, opacity=0.96, hover=f"{cat}: {fmt_val}",
-        ))
-
-    traces.append(go.Scatter3d(
-        x=list(range(len(values))), y=[0] * len(values),
-        z=[v + top_val * 0.08 for v in values],
-        mode="text",
-        text=[value_fmt(v) if value_fmt else f"{v:,.0f}" for v in values],
-        textfont=dict(color=TEXT_PRIMARY, size=12, family="Inter, sans-serif"),
-        hoverinfo="skip", showlegend=False,
+    fmt = value_fmt or (lambda v: f"{v:,.0f}")
+    fig = go.Figure(go.Bar(
+        x=categories, y=values,
+        marker=dict(color=colors, line=dict(width=0.8, color="rgba(46,36,26,0.35)")),
+        text=[fmt(v) for v in values],
+        textposition="outside",
+        textfont=dict(color=TEXT_MUTED, size=11),
+        hovertemplate="<b>%{x}</b><br>" + (z_title or "Value") + ": %{y:,.2f}<extra></extra>",
     ))
-
-    fig = go.Figure(data=traces)
-    layout = _base_scene_layout(height)
-    layout["scene"]["xaxis"].update(tickvals=list(range(len(categories))), ticktext=categories, title=dict(text=""))
-    layout["scene"]["yaxis"].update(showticklabels=False, title=dict(text=""), showbackground=False)
-    layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = camera or _flat_camera(1.05, -1.35, 1.5)
-    layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=max(1.1, n / 3.2), y=0.8, z=0.85)
-    fig.update_layout(**layout)
-    fig.update_layout(showlegend=False)
-    return fig
+    fig.update_layout(**chart_layout_2d(height=height))
+    fig.update_layout(showlegend=False, hovermode="x", bargap=max(0.05, 1 - bar_ratio),
+                       yaxis=dict(title=dict(text=z_title)))
+    return enable_rich_interaction(fig)
 
 
 def grouped_bar3d_chart(categories, series: dict, colors: dict = None, height=420,
                          value_fmt=None, bar_ratio=0.34, gap=0.05, z_title=""):
     """
-    A 3D grouped bar chart: each category on the x-axis holds one small
-    extruded bar per series, arranged side-by-side along y. Use this in
-    place of a stacked/grouped 2D bar chart (e.g. counts by category
-    broken down by risk level).
-
-    `series` is {series_name: [values aligned to categories]}.
+    A clustered 2D bar chart: each category on the x-axis holds one bar
+    per series, grouped side by side and colored from the shared
+    harmonized palette (falling back to CHART_SEQ for any series without
+    an explicit color).
     """
     categories = list(categories)
     names = list(series.keys())
     colors = colors or {}
-    n_series = max(len(names), 1)
-    all_vals = [v for vals in series.values() for v in vals] or [1.0]
-    top_val = max(all_vals)
+    fmt = value_fmt or (lambda v: f"{v:,.0f}")
 
-    half_w = bar_ratio / 2
-    total_depth = n_series * (bar_ratio + gap)
-    y_start = -total_depth / 2
-
-    traces = []
+    fig = go.Figure()
     for s_idx, name in enumerate(names):
         vals = [float(v) for v in series[name]]
         col = colors.get(name, CHART_SEQ[s_idx % len(CHART_SEQ)])
-        y0 = y_start + s_idx * (bar_ratio + gap)
-        y1 = y0 + bar_ratio
-        for c_idx, val in enumerate(vals):
-            if val <= 0:
-                continue
-            z1 = max(val, top_val * 0.006)
-            fmt_val = value_fmt(val) if value_fmt else f"{val:,.0f}"
-            traces.append(_cuboid_trace(
-                c_idx - half_w - 0.02, c_idx + half_w + 0.02, y0 - 0.01, y1 - 0.01, -top_val * 0.008, 0,
-                color="rgba(74,52,28,0.15)",
-            ))
-            traces.append(_cuboid_trace(
-                c_idx - half_w, c_idx + half_w, y0, y1, 0, z1,
-                color=col, opacity=0.96, hover=f"{categories[c_idx]} - {name}: {fmt_val}",
-            ))
-
-    # one dummy marker per series purely to drive a readable legend
-    for s_idx, name in enumerate(names):
-        col = colors.get(name, CHART_SEQ[s_idx % len(CHART_SEQ)])
-        traces.append(go.Scatter3d(
-            x=[None], y=[None], z=[None], mode="markers",
-            marker=dict(size=6, color=col), name=name, showlegend=True,
+        fig.add_trace(go.Bar(
+            x=categories, y=vals, name=str(name),
+            marker=dict(color=col, line=dict(width=0.8, color="rgba(46,36,26,0.35)")),
+            hovertemplate="<b>%{x}</b><br>" + str(name) + ": %{y:,.2f}<extra></extra>",
         ))
 
-    fig = go.Figure(data=traces)
-    layout = _base_scene_layout(height)
-    layout["scene"]["xaxis"].update(tickvals=list(range(len(categories))), ticktext=categories, title=dict(text=""))
-    layout["scene"]["yaxis"].update(showticklabels=False, title=dict(text=""), showbackground=False)
-    layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = _flat_camera(1.1, -1.35, 1.5)
-    layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=max(1.1, len(categories) / 3.2), y=0.85, z=0.85)
-    fig.update_layout(**layout)
-    fig.update_layout(legend=dict(font=dict(color=TEXT_PRIMARY, size=11), bgcolor="rgba(255,255,255,0.85)",
-                                   bordercolor=CARD_BORDER, borderwidth=1, x=0.01, y=0.99))
-    return fig
+    fig.update_layout(**chart_layout_2d(height=height))
+    fig.update_layout(barmode="group", bargap=0.2, bargroupgap=gap, hovermode="x unified",
+                       yaxis=dict(title=dict(text=z_title)))
+    return enable_rich_interaction(fig)
 
 
 def target_bar3d(value, target, label, color, max_value=100, height=280, suffix="%"):
-    """A single 3D 'thermometer' bar with a translucent target plate -
-    used in place of a flat 2D gauge indicator."""
-    z1 = max(value, max_value * 0.006)
-    traces = [
-        _cuboid_trace(-0.3, 0.3, -0.3, 0.3, -max_value * 0.02, 0, color="rgba(74,52,28,0.28)"),
-        _cuboid_trace(-0.3, 0.3, -0.3, 0.3, 0, z1, color=color, opacity=0.96,
-                      hover=f"{label}: {value:.1f}{suffix} (target {target:.0f}{suffix})"),
-        _cuboid_trace(-0.42, 0.42, -0.42, 0.42, target - max_value * 0.012, target + max_value * 0.012,
-                      color="rgba(139,46,46,0.45)", opacity=0.5, hover=f"Target: {target:.0f}{suffix}"),
-        go.Scatter3d(
-            x=[0], y=[0], z=[z1 + max_value * 0.1],
-            mode="text", text=[f"{value:.1f}{suffix}"],
-            textfont=dict(color=TEXT_PRIMARY, size=17, family="Source Serif 4, Georgia, serif"),
-            hoverinfo="skip", showlegend=False,
+    """A radial gauge with a target threshold line - the 2D replacement
+    for the old 3D 'thermometer' bar, in the same harmonized colors."""
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=value,
+        number=dict(suffix=suffix, font=dict(color=BROWN_DARK, size=28,
+                                              family="Source Serif 4, Georgia, serif")),
+        title=dict(text=label, font=dict(color=TEXT_MUTED, size=12)),
+        gauge=dict(
+            axis=dict(range=[0, max_value], tickcolor=TEXT_MUTED, tickfont=dict(color=TEXT_MUTED, size=10)),
+            bar=dict(color=color, thickness=0.28),
+            bgcolor="rgba(255,255,255,0.6)",
+            borderwidth=1, bordercolor=CARD_BORDER,
+            steps=[
+                dict(range=[0, max_value * 0.4], color="rgba(90,58,34,0.08)"),
+                dict(range=[max_value * 0.4, max_value * 0.7], color="rgba(90,58,34,0.14)"),
+                dict(range=[max_value * 0.7, max_value], color="rgba(90,58,34,0.20)"),
+            ],
+            threshold=dict(line=dict(color=CRITICAL, width=3), thickness=0.75, value=target),
         ),
-    ]
-    fig = go.Figure(data=traces)
-    layout = _base_scene_layout(height)
-    layout["scene"]["xaxis"].update(visible=False)
-    layout["scene"]["yaxis"].update(visible=False)
-    layout["scene"]["zaxis"].update(range=[0, max_value], title=dict(text=""))
-    layout["scene"]["camera"] = _flat_camera(1.15, -1.15, 1.5)
-    layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=0.75, y=0.75, z=1.05)
-    fig.update_layout(**layout)
-    fig.update_layout(showlegend=False,
-                       title=dict(text=label, font=dict(family="Inter, sans-serif", size=12, color=TEXT_MUTED),
-                                  x=0.5, xanchor="center", y=0.96))
+    ))
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY),
+        margin=dict(t=40, b=10, l=20, r=20),
+        height=height,
+        transition=dict(duration=450, easing="cubic-in-out"),
+    )
     return fig
 
 
 def ribbon3d_chart(x_labels, series: dict, height=380, z_title="Amount"):
     """
-    A 3D Surface ribbon for two or more time series - a rotatable
-    replacement for a flat area/line trend chart. The surface is kept
-    gently sloped rather than sharply peaked (flatter camera, reduced
-    z-stretch, softer lighting) so the underlying trend stays readable
-    at a glance instead of reading as a dramatic mountain range.
+    A 2D stacked-area trend chart for two or more series - the flat
+    replacement for the old Surface 'ribbon'. Each series gets a genuine
+    vertical gradient fill (Plotly's native fillgradient) in the
+    harmonized teal / brown family so the trend still reads with real
+    dimensionality, without the exaggerated 3D surface.
     """
     names = list(series.keys())
-    n = len(x_labels)
-    z = [list(series[name]) for name in names]
-    x = list(range(n))
-    y = list(range(len(names)))
-
-    colorscale = [[0.0, BROWN_SOFT], [0.5, TEAL_LIGHT], [1.0, TEAL_DARK]]
-
-    fig = go.Figure(data=[go.Surface(
-        x=x, y=y, z=z, colorscale=colorscale, showscale=False, opacity=0.94,
-        contours=dict(z=dict(show=True, usecolormap=True, project_z=True, width=1)),
-        lighting=dict(ambient=0.68, diffuse=0.55, specular=0.2, roughness=0.6),
-    )])
-
-    step = max(1, n // 6)
-    tick_idx = list(range(0, n, step))
-    layout = _base_scene_layout(height)
-    layout["scene"]["xaxis"].update(tickvals=tick_idx, ticktext=[str(x_labels[i]) for i in tick_idx], title=dict(text=""))
-    layout["scene"]["yaxis"].update(tickvals=y, ticktext=names, title=dict(text=""))
-    layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = _flat_camera(1.15, -1.35, 1.6)
-    layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=1.6, y=0.45, z=0.5)
-    fig.update_layout(**layout)
-    return fig
+    palette = [TEAL_DARK, BROWN_MID, TEAL_LIGHT, BROWN_LIGHT] + CHART_SEQ
+    fig = go.Figure()
+    for idx, name in enumerate(names):
+        vals = list(series[name])
+        line_color = palette[idx % len(palette)]
+        r, g, b = _hex_to_rgb(line_color)
+        fig.add_trace(go.Scatter(
+            x=list(x_labels), y=vals, name=str(name), mode="lines",
+            line=dict(width=2.2, color=line_color),
+            fill="tozeroy",
+            fillgradient=dict(type="vertical", colorscale=[
+                [0, f"rgba({r},{g},{b},0.45)"], [1, f"rgba({r},{g},{b},0.03)"],
+            ]),
+            hovertemplate="%{x}<br>" + str(name) + ": %{y:,.0f}<extra></extra>",
+        ))
+    fig.update_layout(**chart_layout_2d(height=height))
+    fig.update_layout(hovermode="x unified", yaxis=dict(title=dict(text=z_title)))
+    return enable_rich_interaction(fig)
 
 
 def waterfall3d_chart(labels, values, height=420, colors=None):
     """
-    A connected 3D waterfall. `values[0]` is an absolute starting total;
-    each subsequent value is a relative delta on the running total
-    (same semantics as go.Waterfall), rendered as linked extruded bars.
+    A 2D waterfall using Plotly's native Waterfall trace - `values[0]` is
+    an absolute starting total, each subsequent value a relative delta
+    on the running total, in the harmonized teal / brown / critical-red
+    palette.
     """
     colors = colors or {}
     inc_color = colors.get("increasing", TEAL_DARK)
     dec_color = colors.get("decreasing", HIGH)
-    tot_color = colors.get("total", TEAL_LIGHT)
+    tot_color = colors.get("total", BROWN_MID)
 
-    traces = []
-    running = 0.0
-    tops = []
-    for idx, (label, val) in enumerate(zip(labels, values)):
-        if idx == 0:
-            base, top, color = 0.0, val, tot_color
-            running = val
-        else:
-            base = running
-            top = running + val
-            color = inc_color if val >= 0 else dec_color
-            running = top
-        z0, z1 = (base, top) if top >= base else (top, base)
-        tops.append(top)
-        hover = f"{label}: {val:,.0f}" if idx == 0 else f"{label}: {val:+,.0f}"
-        traces.append(_cuboid_trace(idx - 0.28, idx + 0.28, -0.28, 0.28, z0, max(z1, z0 + 0.01),
-                                     color=color, opacity=0.96, hover=hover))
-
-    max_top = max(tops) if tops else 1
-    traces.append(go.Scatter3d(
-        x=list(range(len(labels))), y=[0] * len(labels), z=tops,
-        mode="lines", line=dict(color=TEXT_MUTED, width=3, dash="dot"),
-        hoverinfo="skip", showlegend=False,
+    fig = go.Figure(go.Waterfall(
+        orientation="v",
+        measure=["absolute"] + ["relative"] * (len(values) - 1),
+        x=list(labels),
+        y=list(values),
+        text=[f"{v:+,}" if i > 0 else f"{v:,}" for i, v in enumerate(values)],
+        textposition="outside",
+        textfont=dict(color=TEXT_PRIMARY, size=11),
+        connector=dict(line=dict(color=CARD_BORDER, width=1)),
+        increasing=dict(marker=dict(color=inc_color, line=dict(width=0.6, color="rgba(255,255,255,0.6)"))),
+        decreasing=dict(marker=dict(color=dec_color, line=dict(width=0.6, color="rgba(255,255,255,0.6)"))),
+        totals=dict(marker=dict(color=tot_color, line=dict(width=0.6, color="rgba(255,255,255,0.6)"))),
+        hovertemplate="<b>%{x}</b><br>%{y:+,}<extra></extra>",
     ))
-    traces.append(go.Scatter3d(
-        x=list(range(len(labels))), y=[0] * len(labels),
-        z=[t + max_top * 0.06 for t in tops],
-        mode="text",
-        text=[f"{v:,}" if i == 0 else f"{v:+,}" for i, v in enumerate(values)],
-        textfont=dict(color=TEXT_PRIMARY, size=11, family="Inter, sans-serif"),
-        hoverinfo="skip", showlegend=False,
-    ))
-
-    fig = go.Figure(data=traces)
-    layout = _base_scene_layout(height)
-    layout["scene"]["xaxis"].update(tickvals=list(range(len(labels))), ticktext=labels, title=dict(text=""))
-    layout["scene"]["yaxis"].update(visible=False)
-    layout["scene"]["zaxis"].update(title=dict(text=""))
-    layout["scene"]["camera"] = _flat_camera(1.15, -1.4, 1.55)
-    layout["scene"]["aspectmode"] = "manual"
-    layout["scene"]["aspectratio"] = dict(x=2.0, y=0.35, z=0.8)
-    fig.update_layout(**layout)
-    fig.update_layout(showlegend=False)
-    return fig
+    fig.update_layout(**chart_layout_2d(height=height))
+    fig.update_layout(hovermode="x", showlegend=False)
+    return enable_rich_interaction(fig, hover_glow=False)
 
 
 def scatter3d_chart(x, y, z, color_labels=None, color_map=None, size=None,
                      hover_text=None, x_title="", y_title="", z_title="", height=420):
     """
-    A genuine 3D scatter (Mesh3d markers via Scatter3d), used in place of
-    a flat 2D scatter - e.g. transactions plotted by date, amount and a
-    third dimension such as direction or channel, colored by group.
+    A 2D scatter (x vs y), colored by group exactly as before. The third
+    dimension `z` (e.g. channel) - no longer a spatial axis - is instead
+    encoded as marker symbol, so it stays visible at a glance and is
+    still spelled out in the hover text. Accepts (and ignores) a later
+    `fig.update_layout(scene=...)` call some pages still make, since an
+    unused `scene` key on a 2D figure is harmless.
     """
-    color_labels = list(color_labels) if color_labels is not None else ["All"] * len(x)
+    n = len(x)
+    color_labels = list(color_labels) if color_labels is not None else ["All"] * n
     color_map = color_map or {}
     groups = list(dict.fromkeys(color_labels))
     default_colors = teal_gradient(list(range(len(groups))) or [0])
 
-    traces = []
+    symbols = ["circle", "square", "diamond", "triangle-up", "cross", "star",
+               "hexagon", "triangle-down", "pentagon"]
+    z_list = list(z)
+    z_groups = list(dict.fromkeys(z_list))
+    symbol_map = {zg: symbols[i % len(symbols)] for i, zg in enumerate(z_groups)}
+
+    fig = go.Figure()
     for g_idx, g in enumerate(groups):
         idxs = [i for i, lab in enumerate(color_labels) if lab == g]
         col = color_map.get(g, default_colors[g_idx % len(default_colors)])
-        marker_size = [size[i] for i in idxs] if size is not None else 6
-        traces.append(go.Scatter3d(
-            x=[x[i] for i in idxs], y=[y[i] for i in idxs], z=[z[i] for i in idxs],
-            mode="markers", name=str(g),
+        marker_size = [size[i] for i in idxs] if size is not None else 9
+        fig.add_trace(go.Scatter(
+            x=[x[i] for i in idxs], y=[y[i] for i in idxs], mode="markers", name=str(g),
             marker=dict(size=marker_size, color=col, opacity=0.85,
-                        line=dict(width=0.5, color=CARD_BORDER)),
+                        symbol=[symbol_map[z_list[i]] for i in idxs],
+                        line=dict(width=0.8, color="rgba(46,36,26,0.35)")),
             text=[hover_text[i] for i in idxs] if hover_text is not None else None,
-            hoverinfo="text" if hover_text is not None else "x+y+z",
+            hoverinfo="text" if hover_text is not None else "x+y",
         ))
 
-    fig = go.Figure(data=traces)
-    layout = _base_scene_layout(height)
-    layout["scene"]["xaxis"].update(title=dict(text=x_title))
-    layout["scene"]["yaxis"].update(title=dict(text=y_title))
-    layout["scene"]["zaxis"].update(title=dict(text=z_title))
-    layout["scene"]["camera"] = _flat_camera(1.15, -1.35, 1.5)
-    fig.update_layout(**layout)
-    fig.update_layout(legend=dict(font=dict(color=TEXT_PRIMARY, size=11), bgcolor="rgba(255,255,255,0.85)",
-                                   bordercolor=CARD_BORDER, borderwidth=1))
-    return fig
+    fig.update_layout(**chart_layout_2d(height=height))
+    fig.update_layout(
+        xaxis=dict(title=dict(text=x_title)),
+        yaxis=dict(title=dict(text=y_title)),
+        hovermode="closest",
+    )
+    return enable_rich_interaction(fig)
 
 
 def network3d_chart(center_label, center_kind, nodes, color_map, height=460):
     """
-    A 3D ownership / relationship network: the reporting entity sits at
-    the origin, each related node is placed around it in a circle with
-    its elevation (z) driven by an optional weight (e.g. ownership %),
-    and edges are drawn as 3D lines - a rotatable replacement for a flat
-    2D node-link diagram.
+    A 2D ownership / relationship network: the reporting entity sits at
+    the origin, each related node is placed around it in a circle (angle
+    only - weight, e.g. ownership %, now drives marker size instead of
+    elevation), with edges drawn as straight 2D lines.
 
-    `nodes` is a list of dicts: {"label": str, "kind": str, "weight": float}
-    where weight is 0-100 (e.g. ownership_pct) and drives elevation.
-    `color_map` maps kind -> color, and must include an entry for
-    `center_kind`.
+    `nodes` is a list of dicts: {"label": str, "kind": str, "weight": float}.
+    `color_map` maps kind -> color and must include `center_kind`.
     """
     import math
 
     n = max(len(nodes), 1)
-    radius = 1.6
-    node_x, node_y, node_z = [0.0], [0.0], [0.0]
-    node_text, node_color, node_size = [center_label], [color_map.get(center_kind, TEAL_DARK)], [22]
+    radius = 1.0
     edge_traces = []
+    node_x, node_y = [0.0], [0.0]
+    node_text, node_color, node_size = [center_label], [color_map.get(center_kind, TEAL_DARK)], [34]
 
     for idx, node in enumerate(nodes):
         angle = 2 * math.pi * idx / n
         x = radius * math.cos(angle)
         y = radius * math.sin(angle)
         weight = float(node.get("weight", 0) or 0)
-        z = 0.25 + (weight / 100.0) * 1.5
         node_x.append(x)
         node_y.append(y)
-        node_z.append(z)
         node_text.append(f"{node['label']} ({weight:.0f}%)" if weight else node["label"])
         node_color.append(color_map.get(node.get("kind"), TEXT_MUTED))
-        node_size.append(15)
-        edge_traces.append(go.Scatter3d(
-            x=[0, x], y=[0, y], z=[0, z],
-            mode="lines", line=dict(color=CARD_BORDER, width=3),
+        node_size.append(16 + weight * 0.22)
+        edge_traces.append(go.Scatter(
+            x=[0, x], y=[0, y], mode="lines",
+            line=dict(color=CARD_BORDER, width=2),
             hoverinfo="skip", showlegend=False,
         ))
 
-    node_trace = go.Scatter3d(
-        x=node_x, y=node_y, z=node_z, mode="markers+text",
+    node_trace = go.Scatter(
+        x=node_x, y=node_y, mode="markers+text",
         text=node_text, textposition="top center",
         textfont=dict(color=TEXT_PRIMARY, size=11, family="Inter, sans-serif"),
         marker=dict(size=node_size, color=node_color, opacity=0.95,
@@ -1008,11 +897,11 @@ def network3d_chart(center_label, center_kind, nodes, color_map, height=460):
     )
 
     fig = go.Figure(data=edge_traces + [node_trace])
-    layout = _base_scene_layout(height)
-    layout["scene"]["xaxis"].update(visible=False)
-    layout["scene"]["yaxis"].update(visible=False)
-    layout["scene"]["zaxis"].update(title=dict(text="Ownership"))
-    layout["scene"]["camera"] = _flat_camera(1.25, -1.25, 1.6)
-    fig.update_layout(**layout)
-    fig.update_layout(showlegend=False)
+    fig.update_layout(**chart_layout_2d(height=height))
+    fig.update_layout(
+        showlegend=False,
+        xaxis=dict(visible=False, showgrid=False, zeroline=False),
+        yaxis=dict(visible=False, showgrid=False, zeroline=False, scaleanchor="x", scaleratio=1),
+        hovermode="closest",
+    )
     return fig
