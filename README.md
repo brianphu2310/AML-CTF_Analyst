@@ -137,12 +137,19 @@ Your starting point. Five KPI cards across the top (total customers, high/critic
 - **Case Load by Analyst** — sort by count or by name to see workload distribution.
 
 Use this page to decide *where* to dig in next, then head to the relevant page below.
+<img width="1510" height="863" alt="image" src="https://github.com/user-attachments/assets/333d9ba3-49b2-4483-b3e4-27039e0d0f89" />
 
 ### Customer Risk
 The full customer register. Use the sidebar to filter by industry, country, risk level, status, or search by name/ID. The **Risk Score Distribution** chart bins customers into 10-point score ranges, colored by risk level — useful for spotting where your book actually clusters. Click **Download filtered list (CSV)** to export whatever you've filtered to.
+<img width="1510" height="863" alt="image" src="https://github.com/user-attachments/assets/aa5e5613-7997-4a9b-b01a-b03b6de47dac" />
+<img width="1507" height="863" alt="image" src="https://github.com/user-attachments/assets/f9ff08c6-2c4c-4247-80b1-f60d0694735b" />
 
 ### Screening
 The PEP/Sanctions/Adverse Media match queue. Filter by match type, status, or a minimum match score. Each row shows the list source (e.g. DFAT Consolidated List, World-Check), the match score, and the current disposition status. This page is read-only for browsing — dispositioning happens through the **Alerts & Triage** page, which pulls the same underlying screening hits into its unified queue.
+<img width="1507" height="861" alt="image" src="https://github.com/user-attachments/assets/fc79e52e-20d3-4e78-bf14-c6f5fc579710" />
+<img width="1511" height="855" alt="image" src="https://github.com/user-attachments/assets/8b7097e1-b22e-413b-96bc-109bd64f687b" />
+<img width="1510" height="855" alt="image" src="https://github.com/user-attachments/assets/b816f7e7-e283-4327-98b3-89838f26ce2b" />
+<img width="1512" height="862" alt="image" src="https://github.com/user-attachments/assets/99816eea-fc83-4bfb-aa98-574f13ff7605" />
 
 ### Transaction Monitoring
 Four tabs, each running one of the automated typology detectors live against the full transaction ledger:
@@ -152,6 +159,14 @@ Four tabs, each running one of the automated typology detectors live against the
 4. **Customer Drill-down** — pick any customer from the dropdown to see their full transaction scatter plot and table, colored by direction.
 
 If a tab shows "No patterns detected," that typology simply didn't trigger for the current filtered dataset — try a different customer or check the other tabs.
+<img width="1512" height="854" alt="image" src="https://github.com/user-attachments/assets/b5cac04f-35ba-4f5d-b622-04cea2b4c1af" />
+<img width="1512" height="859" alt="image" src="https://github.com/user-attachments/assets/b1790b0c-15e1-4ae9-9fd2-ff01e9bab50b" />
+<img width="1510" height="858" alt="image" src="https://github.com/user-attachments/assets/78e1d54c-f8c8-4965-9302-3cf359138020" />
+<img width="1507" height="858" alt="image" src="https://github.com/user-attachments/assets/06ba993b-5133-428a-ac7c-2208186fad22" />
+<img width="1508" height="853" alt="image" src="https://github.com/user-attachments/assets/bf46c11a-3de7-4843-a052-f552d5857ce3" />
+<img width="1446" height="859" alt="image" src="https://github.com/user-attachments/assets/c02ae2bd-e90d-4b03-a6bf-c67fd44883b9" />
+<img width="1507" height="949" alt="image" src="https://github.com/user-attachments/assets/b0d26449-1c94-405b-abf0-f96b8f81e9cf" />
+<img width="1495" height="978" alt="image" src="https://github.com/user-attachments/assets/f69483d8-1fed-4323-8628-a65817324fe7" />
 
 ### Alerts & Triage
 The single queue where analyst action actually happens for alerts. Steps:
@@ -167,24 +182,41 @@ Four tabs covering the full investigation lifecycle:
 2. **Investigation Workspace** — select a case to see the customer's full profile, prior alerts, screening hits and transaction history side by side. Write source-of-funds/source-of-wealth review notes and save them, or escalate the case to senior review directly from here.
 3. **Escalation & Senior Review** — select an escalated case, record the senior decision (Close Case / Continue Monitoring / Restrict-Exit Relationship), and sign off. "Continue Monitoring" moves the case to `Pending SMR Lodgement`.
 4. **SMR Assessment, Drafting & Submission** — select a case eligible for SMR work, tick the "reasonable grounds" checkbox, click **Generate SMR Narrative**. Review the auto-drafted WHO/WHAT/WHEN/WHERE/HOW/WHY narrative in the editable text box, download it as `.txt` or `.docx`, then mark it as lodged with an AUSTRAC reference number once ready.
+<img width="1446" height="859" alt="image" src="https://github.com/user-attachments/assets/c02ae2bd-e90d-4b03-a6bf-c67fd44883b9" />
+<img width="1507" height="949" alt="image" src="https://github.com/user-attachments/assets/b0d26449-1c94-405b-abf0-f96b8f81e9cf" />
+<img width="1495" height="978" alt="image" src="https://github.com/user-attachments/assets/f69483d8-1fed-4323-8628-a65817324fe7" />
 
 ### UBO Network
 Pick a business from the dropdown to see its ownership structure. The center node is the reporting entity; surrounding nodes are its beneficial owners, sized by ownership percentage and colored by type (individual/corporate/PEP). A PEP-linked owner triggers a red warning banner below the graph flagging that EDD and senior sign-off are required.
+<img width="1506" height="855" alt="image" src="https://github.com/user-attachments/assets/148c8337-d48d-47ea-b2ea-974784345982" />
+<img width="1512" height="855" alt="image" src="https://github.com/user-attachments/assets/4957d394-3853-471a-aed5-9aed5aa4604e" />
 
 ### Business KYC
 The corporate due diligence register. Filter by incorporation country, structure type, or risk rating. Select any entity at the bottom to see its full profile and beneficial owner table side by side — this page and UBO Network cover the same entities from two different angles (register view vs. ownership graph view).
+<img width="1505" height="856" alt="image" src="https://github.com/user-attachments/assets/9b91fed5-644e-4ced-b83f-5059d306c146" />
 
 ### New Client Onboarding
 A guided intake form that runs the same risk-scoring engine a real onboarding decision would use. Fill in customer type, geography, industry, purpose of the relationship, source of funds, expected activity, and (for business customers) beneficial owners. Submitting runs simulated watchlist screening and the CDD scoring model, then shows you the resulting risk rating, required CDD tier, and onboarding decision — download the full CDD record as text or `.docx`.
+<img width="1508" height="856" alt="image" src="https://github.com/user-attachments/assets/2f281bbd-a2b9-4ae6-b620-00f1bd87e246" />
+<img width="1512" height="864" alt="image" src="https://github.com/user-attachments/assets/7aac95e1-3bfd-42db-bb06-52bc35472359" />
+<img width="1511" height="855" alt="image" src="https://github.com/user-attachments/assets/953aca2a-fc9e-4ede-a283-dd00302af6da" />
+<img width="1507" height="862" alt="image" src="https://github.com/user-attachments/assets/d5159423-375a-4615-93b2-0cb3b7db2246" />
+<img width="502" height="775" alt="image" src="https://github.com/user-attachments/assets/ed7ce92f-7ac3-4e02-9d76-946769559871" />
 
 ### Periodic Review
 On **Periodic Review**, the register shows every active customer's review due date (Overdue / Due within 30 days / Scheduled), computed from their risk level. Filter down to the customers you want, select one at the bottom, tick off the remediation checklist items completed, record the outcome, and click **Mark Review Complete**.
+<img width="1509" height="855" alt="image" src="https://github.com/user-attachments/assets/13baa8a3-c694-4a5b-b2da-d87230f7d895" />
 
 ### Audit Trail
 The consolidated log of everything, everywhere, all session. Filter by entity type, actor, date range, or free-text search. Export the filtered view as CSV. Every action you took on any other page (triage, escalation, SMR lodgement, review completion) shows up here immediately, tagged with what changed and why.
+<img width="1507" height="855" alt="image" src="https://github.com/user-attachments/assets/8a0c5d3d-2b2f-48c3-b76c-91abffa29b0f" />
+<img width="1508" height="869" alt="image" src="https://github.com/user-attachments/assets/78609f7b-d3c0-4a0c-bc6e-e93dd716243c" />
 
 ### Process Map
 A read-only reference: the full lifecycle laid out phase by phase, each step linking directly to the page that implements it. Use this if you're not sure which page handles a given stage of the AML/CTF process.
+<img width="1510" height="860" alt="image" src="https://github.com/user-attachments/assets/cf9042bd-bacf-4ce8-a5f2-206c25a0eb51" />
+<img width="1511" height="862" alt="image" src="https://github.com/user-attachments/assets/32cc6b83-83bd-49b9-b5be-f64983eb7282" />
+<img width="1504" height="850" alt="image" src="https://github.com/user-attachments/assets/2c7694f9-7e5e-4dd3-b04f-39ede1cd2909" />
 
 ### Worked Example: Follow One Suspicious Customer End to End
 
