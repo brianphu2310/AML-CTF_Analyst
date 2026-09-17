@@ -436,6 +436,44 @@ div[data-testid="stAlert"] {{
     border-radius: 4px; border-left: 4px solid {TEAL_DARK};
 }}
 hr {{ border-color: {CARD_BORDER}; margin: 1.5rem 0; }}
+/* -------------------------------------------------------------------
+   BI-STYLE REPORT CHROME (Executive Dashboard) - a slicer/filter
+   panel, KPI cards with a trend chip, and a matrix table with inline
+   conditional-formatting data bars, styled to match a real BI tool
+   report page rather than a generic app screen.
+------------------------------------------------------------------- */
+div[data-testid="stVerticalBlockBorderWrapper"] {{
+    border-radius: 8px !important;
+}}
+.slicer-label {{
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: {TEXT_MUTED}; font-weight: 700; margin-bottom: 0.5rem;
+}}
+.bi-tabbar .stTabs [data-baseweb="tab-list"] {{
+    gap: 4px; border-bottom: 1px solid {CARD_BORDER};
+}}
+.kpi-trend-up {{ color: {LOW}; font-weight: 700; }}
+.kpi-trend-down {{ color: {CRITICAL}; font-weight: 700; }}
+.bi-kpi-row {{
+    display: flex; align-items: baseline; gap: 0.45rem; margin-top: 0.4rem;
+    font-size: 0.78rem;
+}}
+.bi-visual-label {{
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: {TEXT_MUTED}; margin-bottom: 0.1rem;
+}}
+.bi-visual-value {{
+    font-family: 'Source Serif 4', Georgia, serif; font-weight: 700;
+    font-size: 1.3rem; color: {TEAL_DARK}; margin-bottom: 0.3rem;
+}}
+.bi-matrix-wrap {{ overflow-x: auto; }}
+.bi-matrix-wrap table {{ font-size: 0.82rem; }}
+.bi-matrix-wrap td, .bi-matrix-wrap th {{ text-align: right; }}
+.bi-matrix-wrap td:first-child, .bi-matrix-wrap th:first-child {{ text-align: left; }}
+.bi-footer {{
+    color: {TEXT_MUTED}; font-size: 0.74rem; text-align: right;
+    margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid {CARD_BORDER};
+}}
 </style>"""
 
 
@@ -502,6 +540,28 @@ def kpi_card(label: str, value: str, sub: str = "", sub_color: str = None):
     st.markdown(textwrap.dedent(html), unsafe_allow_html=True)
 
 
+def kpi_card_trend(label: str, value: str, delta: str = "", sub: str = "",
+                    higher_is_better: bool = True, sub_color: str = None):
+    """A KPI card with a small up/down trend chip next to the sub-label -
+    the standard BI-tool "card visual with trend" pattern. `delta` is a
+    signed string such as '+4.2%' or '-3 cases'; its color is derived
+    from both its sign and whether higher is better for this metric."""
+    sub_color = sub_color or TEXT_MUTED
+    trend_html = ""
+    if delta:
+        is_up = delta.strip().startswith("+")
+        good = is_up if higher_is_better else (not is_up)
+        cls = "kpi-trend-up" if good else "kpi-trend-down"
+        arrow = "\u25B2" if is_up else "\u25BC"
+        trend_html = f'<span class="{cls}">{arrow} {delta.lstrip("+-")}</span>'
+    html = f"""<div class="kpi-card">
+<div class="kpi-label">{label}</div>
+<div class="kpi-value">{value}</div>
+<div class="bi-kpi-row">{trend_html}<span style="color:{sub_color};">{sub}</span></div>
+</div>"""
+    st.markdown(textwrap.dedent(html), unsafe_allow_html=True)
+
+
 def risk_pill(level: str) -> str:
     level_l = (level or "").lower()
     cls = {
@@ -515,6 +575,42 @@ def risk_pill(level: str) -> str:
 
 def section_title(text: str):
     st.markdown(f'<div class="section-title">{text}</div>', unsafe_allow_html=True)
+
+
+def matrix_table_html(row_labels, col_labels, values, row_header="", value_fmt=None, color=None):
+    """Renders a BI-style "matrix" visual: a table where every numeric
+    cell carries a translucent inline bar sized to its share of the
+    table's max value (Power BI / Tableau conditional-formatting data
+    bars), so magnitude is readable at a glance without a separate
+    chart. `values` is a 2D list indexed [row][col], aligned to
+    row_labels / col_labels. Returns HTML - render with
+    st.markdown(html, unsafe_allow_html=True)."""
+    color = color or TEAL_MID
+    flat = [v for row in values for v in row]
+    vmax = max(flat) if flat else 0
+    vmax = vmax or 1
+
+    def fmt(v):
+        return value_fmt(v) if value_fmt else f"{v:,.0f}"
+
+    thead = f"<th>{row_header}</th>" + "".join(f"<th>{c}</th>" for c in col_labels)
+    body_rows = []
+    for r_label, row in zip(row_labels, values):
+        cells = []
+        for v in row:
+            pct = 0 if v <= 0 else max(6, round(v / vmax * 100))
+            cells.append(
+                f'<td><div style="position:relative;height:1.4em;">'
+                f'<div style="position:absolute;top:1px;bottom:1px;right:0;width:{pct}%;'
+                f'background:{color}30;border-radius:2px;"></div>'
+                f'<span style="position:relative;font-weight:600;">{fmt(v)}</span></div></td>'
+            )
+        body_rows.append(f"<tr><td style=\"font-weight:600;\">{r_label}</td>{''.join(cells)}</tr>")
+
+    return (
+        '<div class="bi-matrix-wrap"><table><thead><tr>' + thead + "</tr></thead>"
+        "<tbody>" + "".join(body_rows) + "</tbody></table></div>"
+    )
 
 
 def section_toolbar(title: str, control_fn=None):
@@ -1053,4 +1149,211 @@ def network3d_chart(center_label, center_kind, nodes, color_map, height=460):
     layout["scene"]["camera"] = dict(eye=dict(x=1.8, y=-1.8, z=1.1))
     fig.update_layout(**layout)
     fig.update_layout(showlegend=False)
+    return fig
+
+
+# ==========================================================================
+# FLAT 2D "BI REPORT" CHART ENGINE
+# A second, deliberately flat chart family for report-style pages (e.g.
+# the Executive Dashboard): real Power BI / Tableau report pages are
+# built almost entirely from plain 2D bar, line/area and donut visuals
+# plus KPI cards and matrix tables - not rotated 3D scenes - so these
+# mirror that vocabulary while keeping the same palette, type and
+# hover styling as the rest of the suite. Every figure below trims its
+# own margins to near-zero so the chart fills its card frame instead
+# of floating inside a wide gutter.
+# ==========================================================================
+def _rgba(hex_color: str, alpha: float) -> str:
+    r, g, b = _hex_to_rgb(hex_color)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
+def _flat_layout(height, legend=False, title=""):
+    layout = dict(
+        template="plotly_white",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=11),
+        margin=dict(t=30 if title else (26 if legend else 6), b=6, l=6, r=10),
+        height=height,
+        bargap=0.32,
+        xaxis=dict(gridcolor=CHART_GRID, zeroline=False, linecolor=CARD_BORDER,
+                   tickfont=dict(color=TEXT_MUTED, size=10.5),
+                   title_font=dict(color=TEXT_MUTED, size=10.5)),
+        yaxis=dict(gridcolor=CHART_GRID, zeroline=False, linecolor=CARD_BORDER,
+                   tickfont=dict(color=TEXT_MUTED, size=10.5),
+                   title_font=dict(color=TEXT_MUTED, size=10.5)),
+        hoverlabel=dict(bgcolor=CARD_BG, bordercolor=CARD_BORDER,
+                        font=dict(family="Inter, sans-serif", color=TEXT_PRIMARY, size=12)),
+        showlegend=legend,
+    )
+    if legend:
+        layout["legend"] = dict(orientation="h", yanchor="bottom", y=1.0, xanchor="left", x=0,
+                                 font=dict(color=TEXT_PRIMARY, size=10.5))
+    if title:
+        layout["title"] = dict(text=title, font=dict(family="Source Serif 4, Georgia, serif", size=14, color=TEAL_DARK),
+                                x=0.0, xanchor="left", y=0.97)
+    return layout
+
+
+def bar2d_chart(categories, values, colors=None, horizontal=False, height=300,
+                 value_fmt=None, axis_title="", category_order=None):
+    """A plain, flat bar chart (single series) - labels on the bars,
+    a light gridline on the value axis only, nothing on the category
+    axis. Use `horizontal=True` for a ranked "top N" bar, the most
+    common BI-report bar orientation."""
+    categories = list(categories)
+    values = [float(v) for v in values]
+    if colors is None:
+        colors = teal_gradient(values)
+    if isinstance(colors, str):
+        colors = [colors] * len(values)
+    text = [value_fmt(v) if value_fmt else f"{v:,.0f}" for v in values]
+
+    bar = go.Bar(
+        x=values if horizontal else categories,
+        y=categories if horizontal else values,
+        orientation="h" if horizontal else "v",
+        marker=dict(color=colors, line=dict(width=0.6, color="rgba(46,36,26,0.14)")),
+        text=text, textposition="outside", cliponaxis=False,
+        textfont=dict(color=TEXT_PRIMARY, size=10.5, family="Inter, sans-serif"),
+        hovertemplate=("%{y}: %{x:,.0f}<extra></extra>" if horizontal else "%{x}: %{y:,.0f}<extra></extra>"),
+    )
+    fig = go.Figure(data=[bar])
+    layout = _flat_layout(height)
+    if horizontal:
+        layout["yaxis"].update(showgrid=False)
+        if category_order:
+            layout["yaxis"].update(categoryorder="array", categoryarray=list(reversed(category_order)))
+        else:
+            layout["yaxis"].update(categoryorder="total ascending")
+        layout["xaxis"].update(showgrid=True, title=dict(text=axis_title))
+    else:
+        layout["xaxis"].update(showgrid=False)
+        if category_order:
+            layout["xaxis"].update(categoryorder="array", categoryarray=category_order)
+        layout["yaxis"].update(showgrid=True, title=dict(text=axis_title))
+    fig.update_layout(**layout)
+    return fig
+
+
+def grouped_bar2d_chart(categories, series: dict, colors: dict = None, height=320,
+                         value_fmt=None, horizontal=False, axis_title=""):
+    """A plain clustered/grouped bar chart - one bar per series per
+    category, side by side, the standard BI "clustered column chart"."""
+    categories = list(categories)
+    names = list(series.keys())
+    colors = colors or {}
+    traces = []
+    for i, name in enumerate(names):
+        vals = [float(v) for v in series[name]]
+        col = colors.get(name, CHART_SEQ[i % len(CHART_SEQ)])
+        hover = (f"{name} - " + "%{y}: %{x:,.0f}<extra></extra>") if horizontal else \
+                (f"{name} - " + "%{x}: %{y:,.0f}<extra></extra>")
+        traces.append(go.Bar(
+            x=vals if horizontal else categories,
+            y=categories if horizontal else vals,
+            orientation="h" if horizontal else "v",
+            name=name, marker=dict(color=col, line=dict(width=0.6, color="rgba(46,36,26,0.14)")),
+            hovertemplate=hover,
+        ))
+    fig = go.Figure(data=traces)
+    layout = _flat_layout(height, legend=True)
+    layout["barmode"] = "group"
+    if horizontal:
+        layout["yaxis"].update(showgrid=False, categoryorder="array", categoryarray=list(reversed(categories)))
+        layout["xaxis"].update(showgrid=True, title=dict(text=axis_title))
+    else:
+        layout["xaxis"].update(showgrid=False, categoryorder="array", categoryarray=categories)
+        layout["yaxis"].update(showgrid=True, title=dict(text=axis_title))
+    fig.update_layout(**layout)
+    return fig
+
+
+def line_area_chart(x_labels, series: dict, colors: dict = None, height=300,
+                     y_title="", area=True):
+    """A flat line chart with an optional soft area fill under each
+    series - the BI-report replacement for the rotated Surface ribbon."""
+    names = list(series.keys())
+    colors = colors or {}
+    traces = []
+    for i, name in enumerate(names):
+        vals = list(series[name])
+        col = colors.get(name, CHART_SEQ[i % len(CHART_SEQ)])
+        traces.append(go.Scatter(
+            x=list(x_labels), y=vals, mode="lines", name=name,
+            line=dict(color=col, width=2.4, shape="spline", smoothing=0.3),
+            fill="tozeroy" if area else None,
+            fillcolor=_rgba(col, 0.12) if area else None,
+            hovertemplate=f"{name} - " + "%{x}: %{y:,.0f}<extra></extra>",
+        ))
+    fig = go.Figure(data=traces)
+    layout = _flat_layout(height, legend=len(names) > 1)
+    layout["xaxis"].update(showgrid=False)
+    layout["yaxis"].update(showgrid=True, title=dict(text=y_title))
+    fig.update_layout(**layout)
+    fig.update_layout(hovermode="x unified")
+    return fig
+
+
+def donut_chart(labels, values, colors=None, height=280, center_label="", center_value=""):
+    """A flat donut chart with an optional KPI total in the centre - the
+    BI-report replacement for a 3D pie-like visual."""
+    labels = list(labels)
+    values = [float(v) for v in values]
+    if colors is None:
+        colors = CHART_SEQ[:len(labels)] if len(labels) <= len(CHART_SEQ) else teal_gradient(values)
+
+    fig = go.Figure(data=[go.Pie(
+        labels=labels, values=values, hole=0.64, sort=False,
+        marker=dict(colors=colors, line=dict(color=CARD_BG, width=2)),
+        textinfo="percent", textfont=dict(size=10.5, color=TEXT_PRIMARY, family="Inter, sans-serif"),
+        hovertemplate="%{label}: %{value:,.0f} (%{percent})<extra></extra>",
+    )])
+
+    annotations = []
+    if center_value:
+        annotations.append(dict(text=f"<b>{center_value}</b>", x=0.5, y=0.56, showarrow=False,
+                                 font=dict(size=19, color=TEAL_DARK, family="Source Serif 4, Georgia, serif")))
+    if center_label:
+        annotations.append(dict(text=center_label, x=0.5, y=0.40, showarrow=False,
+                                 font=dict(size=9.5, color=TEXT_MUTED, family="Inter, sans-serif")))
+
+    fig.update_layout(
+        template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", height=height,
+        margin=dict(t=6, b=6, l=6, r=6), annotations=annotations,
+        font=dict(family="Inter, sans-serif"),
+        legend=dict(orientation="v", x=1.0, y=0.5, xanchor="left", yanchor="middle",
+                    font=dict(color=TEXT_PRIMARY, size=10)),
+    )
+    return fig
+
+
+def bullet_kpi_chart(value, target, color, max_value=100, height=54, suffix="%",
+                      label="", higher_is_better=True):
+    """A slim horizontal "bullet" KPI bar: a pale track, a solid value
+    bar, and a dark tick marking the target - the compact BI-report
+    indicator used for compliance-style targets in place of a gauge."""
+    span = max(max_value, value, target) * 1.02 or 1
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[span], y=[""], orientation="h", width=0.62,
+        marker=dict(color=CHART_GRID), hoverinfo="skip", showlegend=False,
+    ))
+    fig.add_trace(go.Bar(
+        x=[value], y=[""], orientation="h", width=0.62,
+        marker=dict(color=color),
+        hovertemplate=f"{label}: {value:.1f}{suffix} (target {target:.0f}{suffix})<extra></extra>",
+        showlegend=False,
+    ))
+    fig.add_shape(type="line", x0=target, x1=target, xref="x", y0=-0.42, y1=0.42, yref="y",
+                  line=dict(color=TEXT_PRIMARY, width=2))
+    fig.update_layout(
+        barmode="overlay", template="plotly_white",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        height=height, margin=dict(t=2, b=2, l=2, r=2),
+        xaxis=dict(range=[0, span], visible=False),
+        yaxis=dict(visible=False),
+        showlegend=False,
+    )
     return fig
