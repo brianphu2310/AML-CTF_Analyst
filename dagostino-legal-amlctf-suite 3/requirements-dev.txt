@@ -1,0 +1,4 @@
+-r requirements.txt
+# The AppTest harness used by the test-suite needs a recent Streamlit; the app itself runs on 1.49+.
+streamlit>=1.60,<2
+pytest>=8
