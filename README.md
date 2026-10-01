@@ -2,6 +2,8 @@
 
 ![Python 3.12](https://img.shields.io/badge/python-3.12-blue) ![Streamlit](https://img.shields.io/badge/built%20with-Streamlit-ff4b4b) ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
+**[▶ Live demo](https://aml-ctfanalyst-ewy8ksvvc2qzujnxkcradq.streamlit.app)** · [Methodology](docs/METHODOLOGY.md) · [Simulator](docs/SIMULATOR.md) · [Architecture](docs/ARCHITECTURE.md)
+
 An interactive AML/CTF back-office dashboard for a fictional three-office law firm, built as the companion to
 the firm's financial operations dashboard — same firm, same partners, this time covering client risk
 rating, transaction monitoring, alert triage, suspicious matter reporting and beneficial-ownership review.
@@ -147,8 +149,8 @@ code fits together).
 ## Run it locally
 
 ```bash
-git clone <repository-url>          # the green "Code" button on this page gives you the URL
-cd dagostino-legal-amlctf-suite
+git clone https://github.com/brianphu2310/AML-CTF_Analyst.git
+cd AML-CTF_Analyst
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 streamlit run app.py
