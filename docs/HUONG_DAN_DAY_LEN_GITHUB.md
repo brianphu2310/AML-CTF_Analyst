@@ -1,12 +1,12 @@
 # Đẩy repo lên GitHub (làm 1 lần, khoảng 10 phút)
 
-Repo đã sẵn sàng trong thư mục `dagostino-legal-amlctf-suite/` (hoặc giải nén file zip cùng tên).
+Repo đã sẵn sàng trong thư mục `AML-CTF_Analyst/` (hoặc giải nén file zip cùng tên).
 
 
 ## Cách nhanh nhất: kéo thả lên GitHub (không cần cài Git)
 
 1. Giải nén file zip. Bạn sẽ thấy các file `app.py`, `README.md`, `requirements.txt` và các thư mục `core`, `views`, `docs`, `tests`, `screenshots`.
-2. Trên GitHub bấm **New repository** → đặt tên `dagostino-legal-amlctf-suite` → **Public** → **Create repository**.
+2. Trên GitHub bấm **New repository** → đặt tên `AML-CTF_Analyst` → **Public** → **Create repository**.
 3. Ở repo vừa tạo bấm **Add file → Upload files**. Mở thư mục vừa giải nén, bấm `Ctrl+A` (Mac: `Cmd+A`) chọn **tất cả file và thư mục bên trong**, rồi kéo thả vào khung upload.
    - Kéo *các file bên trong*, đừng kéo cả thư mục mẹ. Nếu kéo cả thư mục mẹ thì `app.py` sẽ nằm sâu một cấp và Streamlit sẽ không tìm thấy.
 4. Bấm **Commit changes**. Kiểm tra trang chính repo phải thấy `app.py` và `requirements.txt` nằm ngay ngoài cùng.
@@ -35,22 +35,22 @@ Nếu bạn quen dùng Git thì làm theo cách bên dưới, đầy đủ hơn.
 
 ## Bước 1 — Tạo repo rỗng trên GitHub
 1. Vào github.com → nút **+** (góc trên phải) → **New repository**.
-2. Repository name: `dagostino-legal-amlctf-suite`
+2. Repository name: `AML-CTF_Analyst`
 3. Chọn **Public** (HR mới xem được).
 4. **Không** tick "Add a README", "Add .gitignore" hay "Choose a license" (repo đã có sẵn cả ba).
 5. Bấm **Create repository**.
 
 ## Bước 2 — Đẩy code lên (dùng Terminal / Git Bash)
-Thay `TEN-GITHUB-CUA-BAN` bằng username GitHub của bạn:
+Thay `brianphu2310` bằng username GitHub của bạn:
 
 ```bash
-cd dagostino-legal-amlctf-suite
+cd AML-CTF_Analyst
 git init -b main
 git config user.name "Tên của bạn"
 git config user.email "email-đăng-ký-github-của-bạn"
 git add .
 git commit -m "Initial commit: D'Agostino Legal AML/CTF compliance suite"
-git remote add origin https://github.com/TEN-GITHUB-CUA-BAN/dagostino-legal-amlctf-suite.git
+git remote add origin https://github.com/brianphu2310/AML-CTF_Analyst.git
 git push -u origin main
 ```
 Dùng đúng email đã đăng ký GitHub (hoặc email dạng `...@users.noreply.github.com` trong Settings → Emails) thì commit mới hiện trên hồ sơ của bạn.
