@@ -1,0 +1,6 @@
+typology_name,opened,dispositioned,escalated,smr_submitted,smr_acknowledged,pct_dispositioned,pct_of_dispositioned_escalated,pct_escalated_acknowledged,pct_of_all_alerts,volume_rank
+Structuring / smurfing,112,109,17,17,17,97.3,15.6,100.0,28.9,1
+Rapid movement of funds,98,94,32,31,31,95.9,34.0,96.9,25.3,2
+Cash-intensive pattern,79,78,19,19,18,98.7,24.4,94.7,20.4,3
+High-risk jurisdiction transfer,67,67,19,19,19,100.0,28.4,100.0,17.3,4
+Trade-based ML indicator,32,31,11,11,11,96.9,35.5,100.0,8.2,5

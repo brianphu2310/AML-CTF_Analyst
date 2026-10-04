@@ -1,0 +1,21 @@
+customer_id,customer_name,customer_type,risk_tier,branch_name,structuring_alerts,repeats_within_90d,shortest_gap_days,first_alert,last_alert,priority_rank
+CL-00094,Santiago Dupree,Individual,High,Camden,6,4,4,2024-07-09,2025-09-15,1
+CL-00018,London Capital Partners,Foreign Entity,High,Richmond,3,2,62,2024-04-26,2024-09-19,2
+CL-00007,Meridian Pacific Trust,Trust,High,Camden,6,1,9,2023-08-19,2025-05-28,3
+CL-00026,Northgate Pty Ltd,Trust,High,Liverpool,3,1,26,2024-06-12,2024-12-02,4
+CL-00043,Ashfield Capital Pty Ltd,Trust,Medium,Camden,2,1,26,2025-04-05,2025-05-01,5
+CL-00148,Liam Sarantos,Individual,Low,Liverpool,2,1,41,2025-05-26,2025-07-06,5
+CL-00211,Northgate Holdings Pty Ltd,Company,High,Liverpool,2,1,41,2025-07-24,2025-09-03,5
+CL-00009,Bluepeak Group Pty Ltd,Foreign Entity,High,Richmond,4,0,97,2023-12-15,2025-02-06,8
+CL-00006,Singapore Trading Group,Foreign Entity,High,Richmond,3,0,92,2023-08-08,2025-03-24,9
+CL-00066,Harbour Nominees Pty Ltd,Foreign Entity,High,Liverpool,3,0,192,2024-04-22,2025-05-16,9
+CL-00081,Coral Bay Trading Co.,SMSF,Medium,Camden,3,0,118,2024-05-27,2025-08-30,9
+CL-00002,Meridian Holdings Ltd.,Trust,Medium,Richmond,2,0,306,2024-10-26,2025-08-28,12
+CL-00013,Olivia Pemberton,Individual,Low,Camden,2,0,561,2024-01-20,2025-08-03,12
+CL-00014,Bluepeak Pty Ltd,Company,Medium,Camden,2,0,95,2024-09-20,2024-12-24,12
+CL-00030,Ashfield Group Pty Ltd,Trust,Medium,Liverpool,2,0,216,2023-10-14,2024-05-17,12
+CL-00032,Lucas Abernathy,Individual,Low,Richmond,2,0,173,2023-11-10,2024-05-01,12
+CL-00067,Ashfield Holdings Pty Ltd,SMSF,Medium,Camden,2,0,161,2025-02-16,2025-07-27,12
+CL-00080,Eastwind Capital Pty Ltd,Trust,Medium,Liverpool,2,0,233,2024-09-07,2025-04-28,12
+CL-00084,Owen Whitfield,Individual,Low,Richmond,2,0,201,2025-01-01,2025-07-21,12
+CL-00121,Harbour Capital Pty Ltd,Foreign Entity,High,Liverpool,2,0,302,2024-10-30,2025-08-28,12

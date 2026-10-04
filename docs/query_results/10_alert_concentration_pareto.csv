@@ -1,0 +1,26 @@
+position,customer_id,customer_name,risk_tier,customer_type,alerts,escalated,false_positives,alert_rank,running_alerts,cumulative_pct_of_alerts,cumulative_pct_of_clients,pareto_band
+1,CL-00009,Bluepeak Group Pty Ltd,High,Foreign Entity,11,2,9,1,11,2.8,0.6,Top half of alerts
+2,CL-00007,Meridian Pacific Trust,High,Trust,8,0,7,2,19,4.9,1.2,Top half of alerts
+3,CL-00064,Redgum Holdings Pty Ltd,Medium,Company,7,2,5,3,26,6.7,1.8,Top half of alerts
+4,CL-00066,Harbour Nominees Pty Ltd,High,Foreign Entity,7,2,5,3,33,8.5,2.4,Top half of alerts
+5,CL-00067,Ashfield Holdings Pty Ltd,Medium,SMSF,7,1,5,3,40,10.3,3.0,Top half of alerts
+6,CL-00094,Santiago Dupree,High,Individual,7,1,4,3,47,12.1,3.7,Top half of alerts
+7,CL-00095,Liam Tanaka,High,Individual,7,0,6,3,54,13.9,4.3,Top half of alerts
+8,CL-00121,Harbour Capital Pty Ltd,High,Foreign Entity,7,4,2,3,61,15.7,4.9,Top half of alerts
+9,CL-00042,Coral Bay Nominees Pty Ltd,Low,Foreign Entity,6,2,2,9,67,17.3,5.5,Top half of alerts
+10,CL-00043,Ashfield Capital Pty Ltd,Medium,Trust,6,2,3,9,73,18.8,6.1,Top half of alerts
+11,CL-00055,Stonecroft Ventures Pty Ltd,High,Company,6,1,4,9,79,20.4,6.7,Top half of alerts
+12,CL-00006,Singapore Trading Group,High,Foreign Entity,5,1,4,12,84,21.6,7.3,Top half of alerts
+13,CL-00048,Fernvale Capital Pty Ltd,High,SMSF,5,2,2,12,89,22.9,7.9,Top half of alerts
+14,CL-00057,Leo Abernathy,Medium,Individual,5,2,2,12,94,24.2,8.5,Top half of alerts
+15,CL-00065,Coral Bay Nominees Pty Ltd,Medium,Foreign Entity,5,1,3,12,99,25.5,9.1,Top half of alerts
+16,CL-00081,Coral Bay Trading Co.,Medium,SMSF,5,0,2,12,104,26.8,9.8,Top half of alerts
+17,CL-00002,Meridian Holdings Ltd.,Medium,Trust,4,0,3,17,108,27.8,10.4,Top half of alerts
+18,CL-00008,Fernvale Holdings Pty Ltd,Medium,Trust,4,3,1,17,112,28.9,11.0,Top half of alerts
+19,CL-00014,Bluepeak Pty Ltd,Medium,Company,4,1,2,17,116,29.9,11.6,Top half of alerts
+20,CL-00018,London Capital Partners,High,Foreign Entity,4,1,3,17,120,30.9,12.2,Top half of alerts
+21,CL-00020,Nina Marlowe,Low,Individual,4,1,3,17,124,32.0,12.8,Top half of alerts
+22,CL-00024,Chloe Delacroix,High,Individual,4,0,3,17,128,33.0,13.4,Top half of alerts
+23,CL-00025,Nina Rourke,Low,Individual,4,2,2,17,132,34.0,14.0,Top half of alerts
+24,CL-00049,Kestrel Group Pty Ltd,Medium,Partnership,4,1,1,17,136,35.1,14.6,Top half of alerts
+25,CL-00053,Olivia Marlowe,High,Individual,4,0,0,17,140,36.1,15.2,Top half of alerts

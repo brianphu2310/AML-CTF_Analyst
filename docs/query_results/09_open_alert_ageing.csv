@@ -1,0 +1,10 @@
+oldest_first,alert_id,typology_name,customer_name,risk_tier,analyst_name,disposition,opened_date,age_days,sla_status,age_bucket,analyst_open_count
+1,ALT-2025370,Trade-based ML indicator,Coral Bay Trading Co.,Medium,Ethan Walsh,Under investigation,2025-09-07,10,Due soon,8-14 days,1
+2,ALT-2025373,Cash-intensive pattern,Harbour Group Pty Ltd,Medium,Sofia Marchetti,Under investigation,2025-09-08,9,Due soon,8-14 days,3
+3,ALT-2025374,Rapid movement of funds,Stonecroft Pty Ltd,High,Grace Lin,Under investigation,2025-09-09,8,Due soon,8-14 days,1
+4,ALT-2025379,Rapid movement of funds,Marlowe Group Pty Ltd,High,Marcus Webb,Under investigation,2025-09-11,6,Within SLA,4-7 days,1
+5,ALT-2025383,Structuring / smurfing,Santiago Dupree,High,Sofia Marchetti,Open,2025-09-15,2,Within SLA,0-3 days,3
+6,ALT-2025384,Rapid movement of funds,Eastwind Trading Co.,Low,Daniel Okafor,Open,2025-09-15,2,Within SLA,0-3 days,1
+7,ALT-2025385,Structuring / smurfing,Brightwater Holdings Pty Ltd,Medium,Priya Anand,Open,2025-09-16,1,Within SLA,0-3 days,2
+8,ALT-2025386,Structuring / smurfing,Brightwater Ventures Pty Ltd,Low,Sofia Marchetti,Open,2025-09-17,0,Within SLA,0-3 days,3
+9,ALT-2025387,Rapid movement of funds,Silverline Pty Ltd,Medium,Priya Anand,Open,2025-09-17,0,Within SLA,0-3 days,2

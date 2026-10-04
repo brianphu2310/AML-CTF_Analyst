@@ -1,0 +1,16 @@
+typology_name,risk_tier,clients_in_tier,alerts,pct_of_typology_alerts,pct_of_clients,alert_intensity_index,tier_rank_in_typology,representation
+Cash-intensive pattern,Low,108,16,20.3,45.8,0.44,3,Under-represented
+Cash-intensive pattern,Medium,92,38,48.1,39.0,1.23,1,Proportional
+Cash-intensive pattern,High,36,25,31.6,15.3,2.07,2,Over-represented
+High-risk jurisdiction transfer,Low,108,21,31.3,45.8,0.68,2,Proportional
+High-risk jurisdiction transfer,Medium,92,28,41.8,39.0,1.07,1,Proportional
+High-risk jurisdiction transfer,High,36,18,26.9,15.3,1.76,3,Over-represented
+Rapid movement of funds,Low,108,34,34.7,45.8,0.76,2,Proportional
+Rapid movement of funds,Medium,92,41,41.8,39.0,1.07,1,Proportional
+Rapid movement of funds,High,36,23,23.5,15.3,1.54,3,Over-represented
+Structuring / smurfing,Low,108,36,32.1,45.8,0.7,2,Proportional
+Structuring / smurfing,Medium,92,33,29.5,39.0,0.76,3,Proportional
+Structuring / smurfing,High,36,43,38.4,15.3,2.52,1,Over-represented
+Trade-based ML indicator,Low,108,7,21.9,45.8,0.48,2,Under-represented
+Trade-based ML indicator,Medium,92,19,59.4,39.0,1.52,1,Over-represented
+Trade-based ML indicator,High,36,6,18.8,15.3,1.23,3,Proportional

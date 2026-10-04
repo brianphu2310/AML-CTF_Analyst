@@ -1,0 +1,12 @@
+risk_tier,branch_name,ageing_bucket,overdue_clients,max_days_overdue,avg_days_overdue,running_total,size_rank
+High,Camden,91-180 days,1,109,109.0,1,3
+High,Liverpool,0-30 days,2,11,9.0,3,1
+High,Liverpool,91-180 days,1,105,105.0,4,3
+High,Richmond,0-30 days,1,16,16.0,5,3
+Medium,Camden,180+ days,1,182,182.0,6,3
+Medium,Liverpool,180+ days,1,211,211.0,7,3
+Medium,Liverpool,31-90 days,1,47,47.0,8,3
+Medium,Richmond,0-30 days,1,8,8.0,9,3
+Medium,Richmond,180+ days,2,399,328.5,11,1
+Low,Liverpool,91-180 days,1,108,108.0,12,3
+Low,Richmond,180+ days,1,575,575.0,13,3

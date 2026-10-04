@@ -1,0 +1,10 @@
+fiscal_quarter,smrs_submitted,avg_bdays,max_bdays,pct_within_3_bdays,over_5_bdays,qoq_change_pct_pts,cumulative_smrs,rag
+FY24 Q1,2,2.0,4,50.0,0,,2,Red
+FY24 Q2,1,2.0,2,100.0,0,50.0,3,Green
+FY24 Q3,5,1.6,2,100.0,0,0.0,8,Green
+FY24 Q4,10,2.1,3,100.0,0,0.0,18,Green
+FY25 Q1,7,3.0,5,57.1,0,-42.9,25,Red
+FY25 Q2,20,2.1,5,85.0,0,27.9,45,Green
+FY25 Q3,18,2.06,4,88.9,0,3.9,63,Green
+FY25 Q4,12,1.83,3,100.0,0,11.1,75,Green
+FY26 Q1,22,2.32,4,90.9,0,-9.1,97,Green

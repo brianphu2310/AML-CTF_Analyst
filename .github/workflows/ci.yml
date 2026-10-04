@@ -19,3 +19,8 @@ jobs:
         run: pip install -r requirements-dev.txt
       - name: Run tests
         run: python -m pytest -q
+      - name: Build warehouse, run data-quality suite and analysis queries
+        run: |
+          python -m warehouse.build
+          python -m warehouse.quality --db warehouse.db
+          python sql/run_queries.py --db warehouse.db

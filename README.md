@@ -99,6 +99,30 @@ Sep 2025):
   positives, while hiring one analyst alone drops capacity utilisation from 55% to 44% without touching a
   single detection rule.
 
+## Data engineering: warehouse, SQL and data quality
+
+Besides the Streamlit app, the repo includes a small, tested data pipeline over the same **simulated** data. It loads the app's
+fixed-seed model into a SQLite star schema, checks it, and runs SQL analysis on it. Nothing is scraped or fetched; no real client,
+transaction or AUSTRAC data is used.
+
+```bash
+python -m warehouse.build            # simulated data -> warehouse.db (dim_/fact_ tables, surrogate keys, FKs, indexes)
+python -m warehouse.quality          # data-quality suite -> docs/DATA_QUALITY.md
+python sql/run_queries.py            # 10 analytical queries -> docs/query_results/*.csv
+```
+
+| What | Where |
+|---|---|
+| ETL module (extract / transform / load, date dimension, business-day measures) | [`warehouse/build.py`](warehouse/build.py), DDL in [`warehouse/schema.sql`](warehouse/schema.sql) |
+| Data-quality checks (nulls, duplicates, referential integrity, business rules, reconciliation to the app's metrics) | [`warehouse/quality.py`](warehouse/quality.py) -> [docs/DATA_QUALITY.md](docs/DATA_QUALITY.md) |
+| 10 SQL queries: triage funnel, typology/risk mix, SMR timeliness, structuring patterns, rule hit and false-positive rates, analyst SLA, review backlog, queue ageing, alert concentration | [`sql/analysis/`](sql/analysis) -> [`docs/query_results/`](docs/query_results) |
+| ER diagram, grain and keys | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) |
+| Data dictionary and source-to-target mapping | [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) |
+| Skills mapped to files | [docs/SKILLS_DEMONSTRATED.md](docs/SKILLS_DEMONSTRATED.md) |
+
+Tests for the pipeline are in `tests/test_warehouse.py`, `tests/test_sql_queries.py` and `tests/test_docs.py`; CI builds the warehouse and runs the quality suite and queries on every push.
+The simulator has no transaction ledger, so the structuring queries analyse alert patterns, not individual cash deposits.
+
 ## More screenshots
 
 | | |
@@ -135,11 +159,12 @@ Sep 2025):
   engine and page modules — the same architecture as the companion financial dashboard.
 * One deterministic model as the single source of truth, so every page reconciles to every other page.
 * Word document generation (python-docx) for SMR drafts, verified by opening the generated files in the tests.
-* **119 automated tests** (run against both the oldest supported dependency versions and the latest): reconciliation checks (the alert ledger sums to the typology and analyst tables,
+* **180+ automated tests** (run against both the oldest supported dependency versions and the latest): reconciliation checks (the alert ledger sums to the typology and analyst tables,
   every SMR traces to an escalated alert, risk tiers match the model's own bounds), the case-decision rules
   (bands, hard stops, business-day deadlines, TTR threshold), simulator maths (goal-seek answers land exactly on
   target), the SMR Word draft's contents, and browser-style tests that click buttons and edit controls, including
   regression tests for past bugs.
+* A SQLite dimensional warehouse with a data-quality suite and SQL analysis layer (see **Data engineering** above).
 * Continuous integration on GitHub Actions.
 
 Method notes: [docs/METHODOLOGY.md](docs/METHODOLOGY.md) (every KPI and model formula) ·
