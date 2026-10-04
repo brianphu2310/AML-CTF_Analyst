@@ -19,11 +19,12 @@ All data is simulated (fixed seed); the skills are real, the dataset is not.
 | **Python / pandas / NumPy** | `warehouse/build.py`, `core/model.py`, `core/metrics.py` |
 | **Dashboarding / BI** | `app.py`, `core/metrics.py` (Streamlit, Plotly) |
 | **AML/CTF domain** (4-factor risk rating, typologies, alert triage, SMR timeliness, periodic CDD review) | `core/ref.py`, `docs/METHODOLOGY.md`, `sql/analysis/01_alert_triage_funnel.sql`, `sql/analysis/03_smr_timeliness.sql`, `sql/analysis/06_rule_hit_rate_false_positive.sql` |
+| **Real-source ingestion and sanctions screening** (UN consolidated list: polite fetch, XML parse, name/alias matching; verified live on a GitHub runner) | `ingestion/un_sanctions.py`, `ingestion/fetch.py`, `docs/INGESTION.md`, `docs/LIVE_RUN.md`, `tests/test_ingestion_un_sanctions.py` |
 | **Documentation** | `README.md`, `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md` |
 
 ## Not claimed
 
-* No real data, no API or web ingestion, no production database or cloud warehouse: the target is SQLite on simulated data.
+* The app and warehouse run on simulated data. The only real data is the UN sanctions list handled by the separate `ingestion/` module (not used by the app). No production database or cloud warehouse: the target is SQLite.
 * No orchestration tool (Airflow, dbt, etc.); the pipeline is a plain Python module run from the command line and CI.
 * No transaction-level data: the simulator generates alerts, so the structuring analysis is alert-pattern analysis only.
 * The customer dimension is type 1 (no history); a type-2 design is described but not faked.

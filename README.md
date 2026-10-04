@@ -99,11 +99,30 @@ Sep 2025):
   positives, while hiring one analyst alone drops capacity utilisation from 55% to 44% without touching a
   single detection rule.
 
+## Real-source ingestion: UN sanctions list
+
+Screening in the app runs on simulated clients. To show the same idea on **real, public data**, the repo includes a small ingestion module for the UN Security Council Consolidated Sanctions List.
+
+```bash
+pip install -r requirements-ingestion.txt
+python -m ingestion.un_sanctions --out data/raw/un_sanctions.csv --screen "Eric Badege"
+```
+
+- **It works on the live source.** The manual GitHub Action [`live-ingestion.yml`](.github/workflows/live-ingestion.yml) downloaded the list and parsed it into **1,011 rows (736 individuals, 275 entities)**; the run, row counts and two screening examples are recorded in [`docs/LIVE_RUN.md`](docs/LIVE_RUN.md).
+- **Polite by design:** checks `robots.txt`, identifies itself, rate-limits, retries with back-off, caches. 25 offline tests (mocked HTTP, hand-written fixture) run in CI.
+- **Screening:** normalised exact match, token-set overlap and fuzzy ratio on names and aliases; a score is a prompt for human review, not a decision.
+- **Not a compliance control.** Australian reporting entities must screen against the DFAT Consolidated List and whatever their AML/CTF program requires. DFAT and AUSTRAC pages did not return data to the GitHub runner, so they are not used here.
+
+Details: [`docs/INGESTION.md`](docs/INGESTION.md).
+
+---
+
 ## Data engineering: warehouse, SQL and data quality
 
 Besides the Streamlit app, the repo includes a small, tested data pipeline over the same **simulated** data. It loads the app's
-fixed-seed model into a SQLite star schema, checks it, and runs SQL analysis on it. Nothing is scraped or fetched; no real client,
-transaction or AUSTRAC data is used.
+fixed-seed model into a SQLite star schema, checks it, and runs SQL analysis on it. The warehouse itself never touches the network; no real client,
+transaction or AUSTRAC data is used. One separate, optional module downloads a real public list (see
+[Real-source ingestion](#real-source-ingestion-un-sanctions-list)).
 
 ```bash
 python -m warehouse.build            # simulated data -> warehouse.db (dim_/fact_ tables, surrogate keys, FKs, indexes)
