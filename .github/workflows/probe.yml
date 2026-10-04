@@ -1,0 +1,25 @@
+name: Probe sources (temporary)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe
+        run: |
+          mkdir -p docs
+          {
+            echo "# Source probe"
+            for u in https://www.dfat.gov.au/international-relations/security/sanctions/consolidated-list https://www.dfat.gov.au/sites/default/files/regulation8_consolidated.xlsx https://www.austrac.gov.au/news-and-media/media-release; do
+              echo; echo "## $u"; echo '```'
+              curl -sIL -m 25 -A "portfolio-probe/0.1 (https://github.com/brianphu2310)" "$u" | grep -iE "^(HTTP|content-type|content-length|location)" | head -8
+              echo '--- body start ---'
+              curl -sL -m 25 -A "portfolio-probe/0.1 (https://github.com/brianphu2310)" "$u" | head -c 500 | tr -d '\000' | cut -c1-200
+              echo; echo '```'
+            done
+          } > docs/PROBE.md
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/PROBE.md; git commit -m "Probe output" ; git pull --rebase -q; git push
