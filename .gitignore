@@ -18,3 +18,5 @@ Thumbs.db
 # Local SQLite warehouse (rebuild with: python -m warehouse.build)
 warehouse.db
 *.db-journal
+data/raw_html/
+data/raw/

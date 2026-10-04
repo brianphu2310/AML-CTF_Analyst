@@ -1,0 +1,61 @@
+name: Live ingestion (manual)
+
+# Downloads the real UN Security Council consolidated list from a GitHub-hosted runner, parses it,
+# screens two names and records the result in docs/LIVE_RUN.md. Not part of the normal CI, and it
+# does not change any committed data other than that one file.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-ingestion.txt
+      - name: Fetch, parse and screen
+        run: |
+          mkdir -p data/raw
+          python -m ingestion.un_sanctions --out data/raw/un_sanctions.csv --screen "Eric Badege" -v > data/raw/screen_listed.txt 2> data/raw/run.log || true
+          python -m ingestion.un_sanctions --out data/raw/un_sanctions.csv --screen "Zebediah Quillfeather" > data/raw/screen_unlisted.txt 2>> data/raw/run.log || true
+      - name: Write docs/LIVE_RUN.md
+        if: always()
+        run: |
+          {
+            echo "# Last live ingestion run (UN consolidated sanctions list)"
+            echo
+            echo "Written by \`live-ingestion.yml\` on a GitHub-hosted runner. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "- Run at (UTC): $(date -u +%FT%TZ)"
+            if [ -f data/raw/un_sanctions.csv ]; then
+              python - <<'PY'
+          import csv, collections
+          rows = list(csv.DictReader(open("data/raw/un_sanctions.csv", encoding="utf-8")))
+          c = collections.Counter(r["record_type"] for r in rows)
+          print(f"- Rows: {len(rows)} ({c['individual']} individuals, {c['entity']} entities)")
+          print(f"- Distinct UN list programmes: {len({r['un_list_type'] for r in rows})}")
+          print(f"- Most recent listing date in the file: {max(r['listed_on'] for r in rows if r['listed_on'])}")
+          PY
+            else
+              echo "- No CSV written (see log below)"
+            fi
+            echo
+            echo "## Screening a listed name (\"Eric Badege\")"; echo '```'; cat data/raw/screen_listed.txt; echo '```'
+            echo
+            echo "## Screening an unlisted name (\"Zebediah Quillfeather\")"; echo '```'; cat data/raw/screen_unlisted.txt; echo "(no output = no hit above the threshold)"; echo '```'
+            echo
+            echo "## Run log (tail)"; echo '```'; tail -12 data/raw/run.log | cut -c1-220; echo '```'
+          } > docs/LIVE_RUN.md
+      - name: Commit LIVE_RUN.md
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/LIVE_RUN.md
+          git commit -m "Record last live ingestion run" || exit 0
+          git pull --rebase -q && git push

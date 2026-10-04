@@ -4,3 +4,4 @@ streamlit>=1.60,<2
 pytest>=8
 # The warehouse/ pipeline uses only the standard-library sqlite3 module plus pandas/numpy from requirements.txt,
 # so it needs no extra packages. SQLite >= 3.25 (window functions) ships with every supported Python.
+-r requirements-ingestion.txt
