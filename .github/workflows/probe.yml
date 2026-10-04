@@ -13,7 +13,7 @@ jobs:
           mkdir -p docs
           {
             echo "# Source probe"
-            for u in https://www.dfat.gov.au/international-relations/security/sanctions/consolidated-list https://www.dfat.gov.au/sites/default/files/regulation8_consolidated.xlsx https://www.austrac.gov.au/news-and-media/media-release; do
+            for u in https://scsanctions.un.org/resources/xml/en/consolidated.xml https://scsanctions.un.org/consolidated/ https://www.dfat.gov.au/; do
               echo; echo "## $u"; echo '```'
               curl -sIL -m 25 -A "portfolio-probe/0.1 (https://github.com/brianphu2310)" "$u" | grep -iE "^(HTTP|content-type|content-length|location)" | head -8
               echo '--- body start ---'
