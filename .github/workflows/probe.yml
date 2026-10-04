@@ -11,15 +11,18 @@ jobs:
       - name: Probe
         run: |
           mkdir -p docs
-          {
-            echo "# Source probe"
-            for u in https://scsanctions.un.org/resources/xml/en/consolidated.xml https://scsanctions.un.org/consolidated/ https://www.dfat.gov.au/; do
-              echo; echo "## $u"; echo '```'
-              curl -sIL -m 25 -A "portfolio-probe/0.1 (https://github.com/brianphu2310)" "$u" | grep -iE "^(HTTP|content-type|content-length|location)" | head -8
-              echo '--- body start ---'
-              curl -sL -m 25 -A "portfolio-probe/0.1 (https://github.com/brianphu2310)" "$u" | head -c 500 | tr -d '\000' | cut -c1-200
-              echo; echo '```'
-            done
-          } > docs/PROBE.md
+          curl -sL -m 60 -A "aml-portfolio-ingest/0.1 (https://github.com/brianphu2310/AML-CTF_Analyst)" https://scsanctions.un.org/resources/xml/en/consolidated.xml -o /tmp/un.xml
+          curl -sI -m 20 https://scsanctions.un.org/robots.txt | head -3 > /tmp/robots_head.txt; curl -sL -m 20 https://scsanctions.un.org/robots.txt | head -15 >> /tmp/robots_head.txt
+          python3 - <<'PY' > docs/PROBE.md
+          import collections, xml.etree.ElementTree as ET
+          t=ET.parse('/tmp/un.xml'); r=t.getroot()
+          print('# probe'); print('root', r.tag, r.attrib)
+          c=collections.Counter(); 
+          for e in r.iter(): c[e.tag]+=1
+          for k,v in c.items(): print(k,v)
+          for sec in ('INDIVIDUAL','ENTITY'):
+              e=next(r.iter(sec)); print('---',sec); print(ET.tostring(e,encoding='unicode')[:2500])
+          PY
+          { echo '--- robots'; cat /tmp/robots_head.txt; } >> docs/PROBE.md
           git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/PROBE.md; git commit -m "Probe output" ; git pull --rebase -q; git push
+          git add docs/PROBE.md; git commit -m "Probe output"; git pull --rebase -q; git push
