@@ -20,6 +20,18 @@ Suspicious Matter Report draft as a Word document.
 
 ![Simulator](screenshots/08-simulator.png)
 
+## At a glance
+
+[![CI](https://github.com/brianphu2310/AML-CTF_Analyst/actions/workflows/ci.yml/badge.svg)](https://github.com/brianphu2310/AML-CTF_Analyst/actions)
+
+| | |
+|---|---|
+| **Question** | Can a law firm that is new to AML/CTF (Tranche 2) run client risk rating, monitoring, alert triage and SMR drafting from one tool, and screen names against a real sanctions list? |
+| **What I built** | Streamlit back-office app over a SQL warehouse, an AUSTRAC 4-factor risk model, a Decision Simulator, and a polite scraper of the UN Security Council consolidated list with name screening. |
+| **Key results** | 236 synthetic clients: 36 (15%) high risk, 92 (39%) medium. 95 alerts opened, 21 escalated to SMR. UN list fetched live in CI: 1,011 entries (736 individuals, 275 entities). |
+| **Proof** | CI green, 206 tests, [docs/LIVE_RUN.md](docs/LIVE_RUN.md) written by a GitHub Actions run. |
+| **Honest limits** | Client data is synthetic; the UN list is real. DFAT and AUSTRAC pages returned no usable data to the runner, so they are not used. A demonstration, not a production compliance system, and not legal advice. |
+
 ## ★ Flagship: the Case Decision Simulator
 
 The hardest part of an AML analyst's day is not finding alerts but **deciding what to do with one**, and
